@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TileConfig, TileSize, TileType } from '../types';
+import { playChord } from '../utils/sound';
 
 interface TileProps {
   config: TileConfig;
@@ -19,12 +20,17 @@ const Tile: React.FC<TileProps> = ({ config }) => {
     videoUrl, 
     link, 
     linkTarget,
-    shadows 
+    shadows,
+    soundKey
   } = config;
 
   // Local state for visualizer mode and hover state
   const [visualizerMode, setVisualizerMode] = useState<'bars' | 'wave' | 'spectrum'>(config.visualizerStyle || 'bars');
   const [isHovered, setIsHovered] = useState(false);
+  
+  // Refs
+  const stopSoundRef = useRef<(() => void) | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Grid spanning logic
   const spanClass = {
@@ -92,19 +98,72 @@ const Tile: React.FC<TileProps> = ({ config }) => {
 
   // --- INTERACTION ---
   
-  // Use semantic HTML tag: 'a' if link exists, 'div' otherwise.
+  // Video Handling Effect
+  useEffect(() => {
+    if (!videoRef.current) return;
+    
+    // If there is no image URL, we might want the video to be visible always.
+    // However, to keep the "preview" feel, we stick to hover unless user specifically wants background video.
+    // For this implementation, hover triggers play.
+    if (isHovered) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.debug("Autoplay prevented", error);
+        });
+      }
+    } else {
+      videoRef.current.pause();
+      // If we want it to act like a GIF that resets:
+      videoRef.current.currentTime = 0; 
+    }
+  }, [isHovered]);
+
+  // Priority: If link exists, it is an Anchor tag. Otherwise Div.
   const Tag = link ? 'a' : 'div';
   
   const handleInteraction = (e: React.MouseEvent) => {
-    // If it's a link, the anchor tag handles navigation naturally.
-    // If it's an audio tile without a link, we toggle visualizer.
-    if (!link && type === TileType.AUDIO && active) {
+    // If link exists, propagate click normally (navigate).
+    if (link) return;
+
+    // 1. Audio Tile Interaction (Toggle Visualizer)
+    if (type === TileType.AUDIO && active) {
       e.preventDefault();
       setVisualizerMode(prev => {
         if (prev === 'bars') return 'wave';
         if (prev === 'wave') return 'spectrum';
         return 'bars';
       });
+    }
+
+    // 2. Video Tile Interaction (Fullscreen)
+    // Only if NO link is present.
+    if (type === TileType.VIDEO && videoUrl && videoRef.current) {
+      e.preventDefault();
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen();
+        videoRef.current.muted = false; 
+      } else if ((videoRef.current as any).webkitRequestFullscreen) {
+        (videoRef.current as any).webkitRequestFullscreen();
+      } else if ((videoRef.current as any).msRequestFullscreen) {
+        (videoRef.current as any).msRequestFullscreen();
+      }
+    }
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (soundKey) {
+      if (stopSoundRef.current) stopSoundRef.current();
+      stopSoundRef.current = playChord(soundKey);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    if (stopSoundRef.current) {
+      stopSoundRef.current(); 
+      stopSoundRef.current = null;
     }
   };
 
@@ -142,19 +201,24 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   };
 
   const hasBackgroundMedia = Boolean(imageUrl || videoUrl);
+  
+  // Logic to determine which media layer is visible
+  // If video exists and is hovered (or if there's no image to fallback to), show video.
+  const isVideoVisible = videoUrl && (isHovered || !imageUrl);
+  const isImageVisible = imageUrl && !isVideoVisible;
 
   return (
     <div 
       className={`relative group ${spanClass} select-none`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* 1. Backlight Glow Layer */}
       <div 
         className={`absolute -inset-1 bg-gradient-to-br ${glowColorClass} rounded-[30px] ${activeGlowBlur} transition-opacity duration-500 ease-out ${glowOpacityState}`}
       />
 
-      {/* 2. Main Tile Container (Dynamic Tag for Link Support) */}
+      {/* 2. Main Tile Container */}
       <Tag 
         href={link}
         target={link ? (linkTarget || '_blank') : undefined}
@@ -176,22 +240,30 @@ const Tile: React.FC<TileProps> = ({ config }) => {
       >
         
         {/* 3. Background Media Layer */}
-        {videoUrl ? (
+        {imageUrl && (
+           <img 
+            src={imageUrl} 
+            alt={title} 
+            className={`
+              absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-0
+              ${isImageVisible ? 'opacity-60 group-hover:opacity-80' : 'opacity-0'}
+            `}
+          />
+        )}
+
+        {videoUrl && (
           <video 
+            ref={videoRef}
             src={videoUrl} 
-            autoPlay 
             muted 
             loop 
             playsInline 
-            className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500 z-0" 
+            className={`
+              absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-0
+              ${isVideoVisible ? 'opacity-100' : 'opacity-0'}
+            `}
           />
-        ) : imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={title} 
-            className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500 z-0" 
-          />
-        ) : null}
+        )}
 
         {/* 4. Scrim / Tint Layer (Better text readability) */}
         {hasBackgroundMedia && (
@@ -203,7 +275,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
           <div className={`absolute inset-0 bg-gradient-to-br ${activeTintClass} pointer-events-none z-0 mix-blend-overlay`} />
         )}
 
-        {/* 6. Foreground Content Layer - Z-Index ensures visibility */}
+        {/* 6. Foreground Content Layer - Z-Index ensures visibility over media */}
         <div className="flex flex-col justify-between h-full p-5 z-10 relative">
           
           {/* Header Area */}
@@ -231,8 +303,8 @@ const Tile: React.FC<TileProps> = ({ config }) => {
               <div className={`w-2 h-2 rounded-full bg-${accentColor === 'blue' ? 'blue' : 'violet'}-400 shadow-[0_0_10px_currentColor] ring-1 ring-white/30`} />
             )}
             
-            {/* Play Icon for Video visual */}
-            {type === TileType.VIDEO && !icon && (
+            {/* Play Icon for Video visual if no icon provided */}
+            {type === TileType.VIDEO && !icon && !link && (
               <div className="
                 w-10 h-10 rounded-full 
                 bg-white/10 backdrop-blur-md 
@@ -241,6 +313,18 @@ const Tile: React.FC<TileProps> = ({ config }) => {
                 shadow-[0_0_10px_rgba(0,0,0,0.2)]
               ">
                  <svg className="w-4 h-4 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+            )}
+            {/* Link Icon for Video visual if link provided */}
+            {type === TileType.VIDEO && !icon && link && (
+              <div className="
+                w-10 h-10 rounded-full 
+                bg-white/10 backdrop-blur-md 
+                border border-white/20 
+                flex items-center justify-center 
+                shadow-[0_0_10px_rgba(0,0,0,0.2)]
+              ">
+                 <svg className="w-4 h-4 text-white fill-white" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path fill="none" stroke="currentColor" strokeWidth="2" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
               </div>
             )}
           </div>

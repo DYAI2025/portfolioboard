@@ -17,6 +17,8 @@ export enum TileSize {
   LARGE = '2x2'
 }
 
+export type SoundKey = 'Cm' | 'Dm' | 'Em' | 'Fm' | 'Gm' | 'Am';
+
 export interface TileShadowConfig {
   default?: string;
   hover?: string;
@@ -39,4 +41,5 @@ export interface TileConfig {
   accentColor?: 'blue' | 'purple' | 'white' | 'orange' | 'green';
   visualizerStyle?: 'bars' | 'wave' | 'spectrum';
   shadows?: TileShadowConfig;
+  soundKey?: SoundKey; // Key for the organ sound (Cm, Dm, etc.)
 }

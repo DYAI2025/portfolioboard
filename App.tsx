@@ -1,9 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Tile from './components/Tile';
 import FloatingDock from './components/FloatingDock';
 import { PORTFOLIO_TILES, APP_METADATA } from './constants';
+import { initAudio } from './utils/sound';
 
 const App: React.FC = () => {
+  
+  // Try to initialize audio context on mount or first interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      initAudio();
+      // Remove listener after first successful interaction to avoid overhead
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center py-12 px-4 sm:px-6 selection:bg-violet-500/30">
       

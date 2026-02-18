@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const PORTFOLIO_TILES: TileConfig[] = [
-  // Row 1: Large primary interaction (Prompt input visual)
+  // Row 1
   {
     id: '1',
     type: TileType.TEXT,
@@ -26,7 +26,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     subtitle: 'DeepThink Enabled',
     icon: <Terminal size={20} />,
     active: false,
-    accentColor: 'purple'
+    accentColor: 'purple',
+    soundKey: 'Cm'
   },
   {
     id: '2',
@@ -35,7 +36,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Voice',
     icon: <Mic size={24} />,
     active: false,
-    accentColor: 'white'
+    accentColor: 'white',
+    soundKey: 'Dm'
   },
   {
     id: '3',
@@ -44,10 +46,11 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Send',
     icon: <Send size={24} />,
     active: true, // Lit up state
-    accentColor: 'blue'
+    accentColor: 'blue',
+    soundKey: 'Em'
   },
 
-  // Row 2: Stats & Projects
+  // Row 2
   {
     id: '4',
     type: TileType.NUMBER,
@@ -55,7 +58,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Projects',
     value: '14',
     active: true,
-    accentColor: 'purple'
+    accentColor: 'purple',
+    soundKey: 'Fm'
   },
   {
     id: '5',
@@ -64,8 +68,10 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Github',
     icon: <Code size={28} />,
     link: 'https://github.com',
-    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=400&auto=format&fit=crop', // Example: Link with background image
-    accentColor: 'white'
+    linkTarget: '_blank', // Explicitly open in new tab
+    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=400&auto=format&fit=crop', 
+    accentColor: 'white',
+    soundKey: 'Gm'
   },
   {
     id: '6',
@@ -75,7 +81,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     subtitle: 'Latest shots',
     imageUrl: 'https://picsum.photos/seed/photo/400/400?grayscale',
     link: '#',
-    accentColor: 'white'
+    accentColor: 'white',
+    soundKey: 'Am'
   },
 
   // Row 3
@@ -87,7 +94,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     subtitle: 'Optimized',
     icon: <Cpu size={32} />,
     active: false,
-    accentColor: 'blue'
+    accentColor: 'blue',
+    soundKey: 'Cm' 
   },
   {
     id: '8',
@@ -96,7 +104,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Status',
     subtitle: 'Online',
     icon: <Activity size={20} />,
-    accentColor: 'green'
+    accentColor: 'green',
+    soundKey: 'Dm'
   },
   
   // Row 4
@@ -107,7 +116,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Design System',
     subtitle: 'Figma / CSS',
     icon: <Layers size={24} />,
-    accentColor: 'purple'
+    accentColor: 'purple',
+    soundKey: 'Em'
   },
   {
     id: '10',
@@ -116,7 +126,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Search',
     icon: <Search size={24} />,
     active: false,
-    accentColor: 'white'
+    accentColor: 'white',
+    soundKey: 'Fm'
   },
   {
     id: '11',
@@ -125,7 +136,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Settings',
     icon: <Settings size={24} />,
     active: false,
-    accentColor: 'white'
+    accentColor: 'white',
+    soundKey: 'Gm'
   },
   // Row 5
   {
@@ -136,20 +148,22 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     subtitle: 'Focus Playlist',
     icon: <Music size={24} />,
     active: true,
-    accentColor: 'orange'
+    accentColor: 'orange',
+    soundKey: 'Am'
   },
   // Row 6
   {
     id: '13',
     type: TileType.VIDEO,
     size: TileSize.LARGE,
-    title: 'Showreel 2025',
-    subtitle: '4K • 60fps',
-    // Using a reliable sample video URL (usually works for demos)
-    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', 
-    link: 'https://youtube.com',
+    title: 'Bazodia',
+    subtitle: 'The Essence',
+    // Using a sample space/ethereal video that fits the "Bazodia" theme
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 
+    imageUrl: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=800&auto=format&fit=crop', // Space nebula thumbnail
     active: false,
-    accentColor: 'blue'
+    accentColor: 'purple',
+    soundKey: 'Cm'
   }
 ];
 
