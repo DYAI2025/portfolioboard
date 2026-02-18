@@ -32,7 +32,9 @@ export interface TileConfig {
   value?: string | number;
   icon?: React.ReactNode;
   imageUrl?: string;
+  videoUrl?: string; // Support for background videos (mp4/webm)
   link?: string;
+  linkTarget?: '_blank' | '_self' | '_parent' | '_top'; // Configurable link target
   active?: boolean; // If true, mimics the "lit up" state from the reference
   accentColor?: 'blue' | 'purple' | 'white' | 'orange' | 'green';
   visualizerStyle?: 'bars' | 'wave' | 'spectrum';

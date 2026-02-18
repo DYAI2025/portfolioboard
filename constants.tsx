@@ -64,6 +64,7 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Github',
     icon: <Code size={28} />,
     link: 'https://github.com',
+    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=400&auto=format&fit=crop', // Example: Link with background image
     accentColor: 'white'
   },
   {
@@ -144,7 +145,9 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     size: TileSize.LARGE,
     title: 'Showreel 2025',
     subtitle: '4K • 60fps',
-    imageUrl: 'https://picsum.photos/seed/video/400/400?grayscale',
+    // Using a reliable sample video URL (usually works for demos)
+    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', 
+    link: 'https://youtube.com',
     active: false,
     accentColor: 'blue'
   }
