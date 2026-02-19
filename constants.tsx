@@ -13,11 +13,24 @@ import {
   Music, 
   Settings,
   Search,
-  Video
+  Video,
+  LayoutDashboard
 } from 'lucide-react';
 
 export const PORTFOLIO_TILES: TileConfig[] = [
-  // Row 1
+  // Row 1 - Dashboard as first tile
+  {
+    id: 'dashboard',
+    type: TileType.LINK,
+    size: TileSize.WIDE,
+    title: 'Dashboard',
+    icon: <LayoutDashboard size={24} />,
+    link: 'https://dashboard.dyai.cloud/',
+    linkTarget: '_blank',
+    imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=600&auto=format&fit=crop',
+    accentColor: 'blue',
+    soundKey: 'Cm'
+  },
   {
     id: '1',
     type: TileType.TEXT,
@@ -39,16 +52,6 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     accentColor: 'white',
     soundKey: 'Dm'
   },
-  {
-    id: '3',
-    type: TileType.ACTION,
-    size: TileSize.SMALL,
-    title: 'Send',
-    icon: <Send size={24} />,
-    active: true, // Lit up state
-    accentColor: 'blue',
-    soundKey: 'Em'
-  },
 
   // Row 2
   {
@@ -68,8 +71,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     title: 'Github',
     icon: <Code size={28} />,
     link: 'https://github.com',
-    linkTarget: '_blank', // Explicitly open in new tab
-    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=400&auto=format&fit=crop', 
+    linkTarget: '_blank',
+    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=400&auto=format&fit=crop',
     accentColor: 'white',
     soundKey: 'Gm'
   },
@@ -90,11 +93,13 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     id: '7',
     type: TileType.LINK,
     size: TileSize.TALL,
-    title: 'System',
-    subtitle: 'Optimized',
-    icon: <Cpu size={32} />,
-    active: false,
-    accentColor: 'blue',
+    title: 'QuissMe',
+    subtitle: 'Astrology App',
+    icon: <Globe size={32} />,
+    link: 'https://quissme.dyai.cloud/',
+    linkTarget: '_blank',
+    imageUrl: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=400&auto=format&fit=crop',
+    accentColor: 'purple',
     soundKey: 'Cm' 
   },
   {
@@ -113,9 +118,12 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     id: '9',
     type: TileType.LINK,
     size: TileSize.WIDE,
-    title: 'Design System',
-    subtitle: 'Figma / CSS',
+    title: 'BAFE Engine',
+    subtitle: 'Astrology API',
     icon: <Layers size={24} />,
+    link: 'https://bafe.fly.dev/',
+    linkTarget: '_blank',
+    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600&auto=format&fit=crop',
     accentColor: 'purple',
     soundKey: 'Em'
   },
@@ -133,9 +141,11 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     id: '11',
     type: TileType.LINK,
     size: TileSize.SMALL,
-    title: 'Settings',
+    title: 'DYAI Pro',
     icon: <Settings size={24} />,
-    active: false,
+    link: 'https://dyai-pro-page.vercel.app/',
+    linkTarget: '_blank',
+    imageUrl: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=400&auto=format&fit=crop',
     accentColor: 'white',
     soundKey: 'Gm'
   },
@@ -158,9 +168,8 @@ export const PORTFOLIO_TILES: TileConfig[] = [
     size: TileSize.LARGE,
     title: 'Bazodia',
     subtitle: 'The Essence',
-    // Using a sample space/ethereal video that fits the "Bazodia" theme
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 
-    imageUrl: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=800&auto=format&fit=crop', // Space nebula thumbnail
+    imageUrl: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=800&auto=format&fit=crop',
     active: false,
     accentColor: 'purple',
     soundKey: 'Cm'
