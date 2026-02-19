@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TileConfig, TileSize, TileType } from '../types';
 import { playChord } from '../utils/sound';
+import { Edit3 } from 'lucide-react';
 
 interface TileProps {
   config: TileConfig;
   forceHighlight?: boolean;
+  isEditing?: boolean;
+  onEdit?: (config: TileConfig) => void;
 }
 
-const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
+const Tile: React.FC<TileProps> = ({ config, forceHighlight = false, isEditing = false, onEdit }) => {
   const { 
     size, 
     type, 
@@ -24,7 +27,8 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
     link, 
     linkTarget,
     shadows,
-    soundKey
+    soundKey,
+    textAlign
   } = config;
 
   // Local state for visualizer mode and hover state
@@ -123,6 +127,8 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
   useEffect(() => {
     if (!videoRef.current) return;
     
+    // In edit mode, we generally want the video to play so user sees what they are picking,
+    // or pause it. Let's keep hover behavior for consistency.
     if (isEffectiveHover) {
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
@@ -142,8 +148,6 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
        if (stopSoundRef.current) stopSoundRef.current();
        stopSoundRef.current = playChord(soundKey);
     }
-    // Cleanup: if we stop being forcefully highlighted, we fade out (via playChord's return)
-    // We only cleanup if forceHighlight was true.
     return () => {
        if (forceHighlight && stopSoundRef.current) {
          stopSoundRef.current();
@@ -153,9 +157,18 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
   }, [forceHighlight, soundKey]);
 
   // Priority: If link exists, it is an Anchor tag. Otherwise Div.
-  const Tag = link ? 'a' : 'div';
+  // BUT: If in editing mode, we force 'div' to prevent navigation
+  const Tag = (link && !isEditing) ? 'a' : 'div';
   
   const handleInteraction = (e: React.MouseEvent) => {
+    // EDIT MODE INTERCEPT
+    if (isEditing) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (onEdit) onEdit(config);
+      return;
+    }
+
     if (link) return;
 
     if (type === TileType.AUDIO && active) {
@@ -172,17 +185,12 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
       if (videoRef.current.requestFullscreen) {
         videoRef.current.requestFullscreen();
         videoRef.current.muted = false; 
-      } else if ((videoRef.current as any).webkitRequestFullscreen) {
-        (videoRef.current as any).webkitRequestFullscreen();
-      } else if ((videoRef.current as any).msRequestFullscreen) {
-        (videoRef.current as any).msRequestFullscreen();
       }
     }
   };
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    // Only play sound on manual hover if not already being forced (to avoid double trigger)
     if (!forceHighlight && soundKey) {
       if (stopSoundRef.current) stopSoundRef.current();
       stopSoundRef.current = playChord(soundKey);
@@ -191,7 +199,6 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    // Cleanup manual hover sound
     if (!forceHighlight && stopSoundRef.current) {
       stopSoundRef.current(); 
       stopSoundRef.current = null;
@@ -243,16 +250,25 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
 
   const effectiveImage = videoThumbnail || imageUrl;
   const hasBackgroundMedia = Boolean(effectiveImage || videoUrl);
-  
   const isVideoVisible = videoUrl && (isEffectiveHover || !effectiveImage);
   const isImageVisible = effectiveImage && !isVideoVisible;
-
   const containerBgClass = hasBackgroundMedia ? 'bg-black' : surfaceClass;
   
-  // Transform scaling: Apply if hovered OR forced
+  // Edit Mode Styles
+  const editModeClass = isEditing 
+    ? 'ring-2 ring-dashed ring-yellow-400/50 cursor-alias hover:ring-yellow-400' 
+    : '';
+
   const scaleClass = isEffectiveHover 
-    ? '-translate-y-1 scale-[1.01] z-30' // Higher z-index for active item
+    ? '-translate-y-1 scale-[1.01] z-30' 
     : 'group-hover:-translate-y-1 group-hover:scale-[1.01] z-20 hover:z-30';
+
+  // Text Alignment Classes
+  const textAlignClass = {
+    left: 'text-left items-start',
+    center: 'text-center items-center',
+    right: 'text-right items-end'
+  }[textAlign || 'left'];
 
   return (
     <div 
@@ -264,6 +280,13 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
       <div 
         className={`absolute -inset-1 bg-gradient-to-br ${glowColorClass} rounded-[30px] ${activeGlowBlur} transition-opacity duration-300 ease-out ${glowOpacityState}`}
       />
+
+      {/* Edit Mode Badge */}
+      {isEditing && (
+        <div className="absolute -top-2 -right-2 z-50 bg-yellow-400 text-black p-1 rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform">
+          <Edit3 size={12} />
+        </div>
+      )}
 
       {/* 2. Main Tile Container */}
       <Tag 
@@ -277,6 +300,7 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
           ${containerBgClass}
           ${!customBoxShadow ? bevelClass : ''}
           ${!customBoxShadow ? shadowClass : ''}
+          ${editModeClass}
           flex flex-col overflow-hidden
           transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
           active:scale-[0.98] active:translate-y-0
@@ -355,36 +379,14 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
             
             {type === TileType.AUDIO && active && renderVisualizer()}
             
+            {/* Generic Active Dot (Only if simple tile) */}
             {active && type !== TileType.NUMBER && type !== TileType.AUDIO && !hasBackgroundMedia && (
               <div className={`w-2 h-2 rounded-full bg-${accentColor === 'blue' ? 'blue' : 'violet'}-400 shadow-[0_0_10px_currentColor] ring-1 ring-white/30`} />
-            )}
-            
-            {type === TileType.VIDEO && !icon && !link && (
-              <div className="
-                w-10 h-10 rounded-full 
-                bg-white/10 backdrop-blur-md 
-                border border-white/20 
-                flex items-center justify-center 
-                shadow-[0_0_10px_rgba(0,0,0,0.2)]
-              ">
-                 <svg className="w-4 h-4 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              </div>
-            )}
-            {type === TileType.VIDEO && !icon && link && (
-              <div className="
-                w-10 h-10 rounded-full 
-                bg-white/10 backdrop-blur-md 
-                border border-white/20 
-                flex items-center justify-center 
-                shadow-[0_0_10px_rgba(0,0,0,0.2)]
-              ">
-                 <svg className="w-4 h-4 text-white fill-white" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path fill="none" stroke="currentColor" strokeWidth="2" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-              </div>
             )}
           </div>
 
           {/* Footer Area */}
-          <div>
+          <div className={`flex flex-col ${textAlignClass}`}>
             {type === TileType.AUDIO && (
                <div className="w-full bg-black/40 h-1 rounded-full mb-3 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
                   <div className="bg-white/80 h-full w-1/3 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />

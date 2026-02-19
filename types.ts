@@ -50,4 +50,5 @@ export interface TileConfig {
   visualizerStyle?: 'bars' | 'wave' | 'spectrum';
   shadows?: TileShadowConfig;
   soundKey?: SoundKey; // Key for the organ sound (Cm, Dm, etc.)
+  textAlign?: 'left' | 'center' | 'right'; // New alignment property
 }
