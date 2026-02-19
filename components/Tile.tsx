@@ -4,9 +4,10 @@ import { playChord } from '../utils/sound';
 
 interface TileProps {
   config: TileConfig;
+  forceHighlight?: boolean;
 }
 
-const Tile: React.FC<TileProps> = ({ config }) => {
+const Tile: React.FC<TileProps> = ({ config, forceHighlight = false }) => {
   const { 
     size, 
     type, 
@@ -30,6 +31,9 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   const [visualizerMode, setVisualizerMode] = useState<'bars' | 'wave' | 'spectrum'>(config.visualizerStyle || 'bars');
   const [isHovered, setIsHovered] = useState(false);
   
+  // Derived state: active if hovered OR forced by sequence
+  const isEffectiveHover = isHovered || forceHighlight;
+
   // Refs
   const stopSoundRef = useRef<(() => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -91,7 +95,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   const customBoxShadow = (() => {
     if (!shadows) return undefined;
     if (active && shadows.active) return shadows.active;
-    if (isHovered && shadows.hover) return shadows.hover;
+    if (isEffectiveHover && shadows.hover) return shadows.hover;
     return shadows.default;
   })();
 
@@ -105,11 +109,13 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   }[accentColor || 'white'];
 
   // Animation States
-  const glowOpacityState = active 
-    ? 'opacity-100 group-hover:opacity-100' 
+  const glowOpacityState = (active || isEffectiveHover)
+    ? 'opacity-100' 
     : 'opacity-10 group-hover:opacity-40';
-  const activeGlowBlur = active ? 'blur-2xl' : 'blur-xl'; 
-  const indicatorColor = active ? 'text-white' : 'text-neutral-500';
+  
+  // Boost blur when force highlighted to make it pop
+  const activeGlowBlur = (active || isEffectiveHover) ? 'blur-2xl' : 'blur-xl'; 
+  const indicatorColor = (active || isEffectiveHover) ? 'text-white' : 'text-neutral-500';
 
   // --- INTERACTION ---
   
@@ -117,31 +123,41 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   useEffect(() => {
     if (!videoRef.current) return;
     
-    // If there is no image URL, we might want the video to be visible always.
-    // However, to keep the "preview" feel, we stick to hover unless user specifically wants background video.
-    // For this implementation, hover triggers play.
-    if (isHovered) {
+    if (isEffectiveHover) {
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch(error => {
-          console.debug("Autoplay prevented", error);
+          // console.debug("Autoplay prevented", error);
         });
       }
     } else {
       videoRef.current.pause();
-      // If we want it to act like a GIF that resets:
       videoRef.current.currentTime = 0; 
     }
-  }, [isHovered]);
+  }, [isEffectiveHover]);
+
+  // Programmatic Sound Effect
+  useEffect(() => {
+    if (forceHighlight && soundKey) {
+       if (stopSoundRef.current) stopSoundRef.current();
+       stopSoundRef.current = playChord(soundKey);
+    }
+    // Cleanup: if we stop being forcefully highlighted, we fade out (via playChord's return)
+    // We only cleanup if forceHighlight was true.
+    return () => {
+       if (forceHighlight && stopSoundRef.current) {
+         stopSoundRef.current();
+         stopSoundRef.current = null;
+       }
+    };
+  }, [forceHighlight, soundKey]);
 
   // Priority: If link exists, it is an Anchor tag. Otherwise Div.
   const Tag = link ? 'a' : 'div';
   
   const handleInteraction = (e: React.MouseEvent) => {
-    // If link exists, propagate click normally (navigate).
     if (link) return;
 
-    // 1. Audio Tile Interaction (Toggle Visualizer)
     if (type === TileType.AUDIO && active) {
       e.preventDefault();
       setVisualizerMode(prev => {
@@ -151,8 +167,6 @@ const Tile: React.FC<TileProps> = ({ config }) => {
       });
     }
 
-    // 2. Video Tile Interaction (Fullscreen)
-    // Only if NO link is present.
     if (type === TileType.VIDEO && videoUrl && videoRef.current) {
       e.preventDefault();
       if (videoRef.current.requestFullscreen) {
@@ -168,7 +182,8 @@ const Tile: React.FC<TileProps> = ({ config }) => {
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    if (soundKey) {
+    // Only play sound on manual hover if not already being forced (to avoid double trigger)
+    if (!forceHighlight && soundKey) {
       if (stopSoundRef.current) stopSoundRef.current();
       stopSoundRef.current = playChord(soundKey);
     }
@@ -176,7 +191,8 @@ const Tile: React.FC<TileProps> = ({ config }) => {
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    if (stopSoundRef.current) {
+    // Cleanup manual hover sound
+    if (!forceHighlight && stopSoundRef.current) {
       stopSoundRef.current(); 
       stopSoundRef.current = null;
     }
@@ -184,7 +200,6 @@ const Tile: React.FC<TileProps> = ({ config }) => {
 
   // --- SUB-COMPONENT: VISUALIZER ---
   const renderVisualizer = () => {
-    // Common base classes for bars
     const barBase = "bg-current rounded-full shadow-[0_0_10px_currentColor] transition-all duration-300 ease-in-out";
 
     if (visualizerMode === 'wave') {
@@ -193,8 +208,8 @@ const Tile: React.FC<TileProps> = ({ config }) => {
            {[0, 1, 2, 3, 4].map((i) => (
              <div 
                key={i} 
-               className={`w-1 ${barBase} ${isHovered ? 'animate-wave-slow' : 'h-1.5'}`} 
-               style={isHovered ? { animationDelay: `${i * 0.15}s` } : undefined} 
+               className={`w-1 ${barBase} ${isEffectiveHover ? 'animate-wave-slow' : 'h-1.5'}`} 
+               style={isEffectiveHover ? { animationDelay: `${i * 0.15}s` } : undefined} 
              />
            ))}
         </div>
@@ -207,51 +222,47 @@ const Tile: React.FC<TileProps> = ({ config }) => {
              {[1, 2, 4, 3, 1, 4].map((n, i) => (
                 <div 
                   key={i}
-                  className={`w-[3px] ${barBase} ${isHovered ? `animate-spec-${n}` : 'h-1'}`}
+                  className={`w-[3px] ${barBase} ${isEffectiveHover ? `animate-spec-${n}` : 'h-1'}`}
                 />
              ))}
          </div>
       );
     }
 
-    // Default: Bars
     return (
        <div className={`flex items-end gap-1 h-5 mb-1 ${indicatorColor}`} title="Bars">
            {[1, 2, 3, 4].map((n, i) => (
              <div 
                key={i} 
-               className={`w-1 ${barBase} ${isHovered ? `animate-eq-${n}` : 'h-1.5'}`}
+               className={`w-1 ${barBase} ${isEffectiveHover ? `animate-eq-${n}` : 'h-1.5'}`}
              />
            ))}
        </div>
     );
   };
 
-  // Determine which image source to use: explicit thumbnail or generic image url
   const effectiveImage = videoThumbnail || imageUrl;
-  
   const hasBackgroundMedia = Boolean(effectiveImage || videoUrl);
   
-  // Logic to determine which media layer is visible
-  // If video exists and is hovered (or if there's no image to fallback to), show video.
-  const isVideoVisible = videoUrl && (isHovered || !effectiveImage);
+  const isVideoVisible = videoUrl && (isEffectiveHover || !effectiveImage);
   const isImageVisible = effectiveImage && !isVideoVisible;
 
-  // Determine container background class
-  // If media exists, we default to black to frame it.
-  // Otherwise use the calculated surfaceClass (which supports custom backgroundClass or default gradients)
   const containerBgClass = hasBackgroundMedia ? 'bg-black' : surfaceClass;
+  
+  // Transform scaling: Apply if hovered OR forced
+  const scaleClass = isEffectiveHover 
+    ? '-translate-y-1 scale-[1.01] z-30' // Higher z-index for active item
+    : 'group-hover:-translate-y-1 group-hover:scale-[1.01] z-20 hover:z-30';
 
   return (
     <div 
-      // Z-Index Strategy: Default z-20. Hover z-10.
-      className={`relative group ${spanClass} select-none z-20 hover:z-10`}
+      className={`relative group ${spanClass} select-none ${scaleClass} transition-all duration-300`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* 1. Backlight Glow Layer */}
       <div 
-        className={`absolute -inset-1 bg-gradient-to-br ${glowColorClass} rounded-[30px] ${activeGlowBlur} transition-opacity duration-500 ease-out ${glowOpacityState}`}
+        className={`absolute -inset-1 bg-gradient-to-br ${glowColorClass} rounded-[30px] ${activeGlowBlur} transition-opacity duration-300 ease-out ${glowOpacityState}`}
       />
 
       {/* 2. Main Tile Container */}
@@ -268,14 +279,13 @@ const Tile: React.FC<TileProps> = ({ config }) => {
           ${!customBoxShadow ? shadowClass : ''}
           flex flex-col overflow-hidden
           transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
-          group-hover:-translate-y-1 group-hover:scale-[1.01]
           active:scale-[0.98] active:translate-y-0
           cursor-pointer no-underline
         `}
         style={customBoxShadow ? { boxShadow: customBoxShadow } : undefined}
       >
         
-        {/* Matte Noise Texture (High Fidelity Finish) - Z-index 2 */}
+        {/* Matte Noise Texture */}
         <div 
             className="absolute inset-0 z-[2] opacity-[0.04] pointer-events-none mix-blend-overlay"
             style={{ 
@@ -284,7 +294,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
             }} 
         />
 
-        {/* 3. Background Media Layer - Z-index 0 */}
+        {/* 3. Background Media Layer */}
         {effectiveImage && (
            <img 
             src={effectiveImage} 
@@ -292,6 +302,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
             className={`
               absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-0
               ${isImageVisible ? 'opacity-60 group-hover:opacity-80' : 'opacity-0'}
+              ${forceHighlight ? '!opacity-80' : ''} 
             `}
           />
         )}
@@ -310,17 +321,17 @@ const Tile: React.FC<TileProps> = ({ config }) => {
           />
         )}
 
-        {/* 4. Scrim / Tint Layer (Better text readability) - Z-index 0 */}
+        {/* 4. Scrim / Tint Layer */}
         {hasBackgroundMedia && (
            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0 pointer-events-none" />
         )}
         
-        {/* 5. Active Tint Overlay - Z-index 0 */}
+        {/* 5. Active Tint Overlay */}
         {active && (
           <div className={`absolute inset-0 bg-gradient-to-br ${activeTintClass} pointer-events-none z-0 mix-blend-overlay`} />
         )}
 
-        {/* 6. Foreground Content Layer - Z-Index 10 ensures visibility over all media/gradients */}
+        {/* 6. Foreground Content Layer */}
         <div className="flex flex-col justify-between h-full p-5 z-10 relative">
           
           {/* Header Area */}
@@ -330,6 +341,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
                 p-2 rounded-full 
                 ${(active || hasBackgroundMedia) ? 'bg-white/10 text-white backdrop-blur-md border border-white/10' : 'bg-[#2a2a2a] text-neutral-400 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),0_1px_0_rgba(255,255,255,0.05)]'}
                 group-hover:text-white group-hover:bg-white/20 transition-all duration-300
+                ${forceHighlight ? '!text-white !bg-white/20' : ''}
               `}>
                 {icon}
               </div>
@@ -343,12 +355,10 @@ const Tile: React.FC<TileProps> = ({ config }) => {
             
             {type === TileType.AUDIO && active && renderVisualizer()}
             
-            {/* Generic Active Dot Indicator */}
             {active && type !== TileType.NUMBER && type !== TileType.AUDIO && !hasBackgroundMedia && (
               <div className={`w-2 h-2 rounded-full bg-${accentColor === 'blue' ? 'blue' : 'violet'}-400 shadow-[0_0_10px_currentColor] ring-1 ring-white/30`} />
             )}
             
-            {/* Play Icon for Video visual if no icon provided */}
             {type === TileType.VIDEO && !icon && !link && (
               <div className="
                 w-10 h-10 rounded-full 
@@ -360,7 +370,6 @@ const Tile: React.FC<TileProps> = ({ config }) => {
                  <svg className="w-4 h-4 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
               </div>
             )}
-            {/* Link Icon for Video visual if link provided */}
             {type === TileType.VIDEO && !icon && link && (
               <div className="
                 w-10 h-10 rounded-full 
@@ -374,7 +383,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
             )}
           </div>
 
-          {/* Footer Area: Text & Subtitle */}
+          {/* Footer Area */}
           <div>
             {type === TileType.AUDIO && (
                <div className="w-full bg-black/40 h-1 rounded-full mb-3 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
@@ -382,11 +391,11 @@ const Tile: React.FC<TileProps> = ({ config }) => {
                </div>
             )}
             
-            <h3 className={`font-medium tracking-wide ${size === TileSize.WIDE || size === TileSize.LARGE ? 'text-xl' : 'text-base'} text-neutral-100 group-hover:text-white transition-colors drop-shadow-md`}>
+            <h3 className={`font-medium tracking-wide ${size === TileSize.WIDE || size === TileSize.LARGE ? 'text-xl' : 'text-base'} text-neutral-100 group-hover:text-white transition-colors drop-shadow-md ${forceHighlight ? '!text-white' : ''}`}>
               {title}
             </h3>
             {subtitle && (
-              <p className="text-neutral-400 text-xs mt-1 group-hover:text-neutral-200 transition-colors font-medium">
+              <p className={`text-neutral-400 text-xs mt-1 group-hover:text-neutral-200 transition-colors font-medium ${forceHighlight ? '!text-neutral-200' : ''}`}>
                 {subtitle}
               </p>
             )}
