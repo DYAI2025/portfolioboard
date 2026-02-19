@@ -39,6 +39,7 @@ export interface TileConfig {
   videoUrl?: string; // Support for background videos (mp4/webm)
   videoThumbnail?: string; // Specific thumbnail for video tiles
   backgroundClass?: string; // Custom CSS class for background (gradients, animations, etc.)
+  showMediaOnHoverOnly?: boolean; // New: If true, media is hidden until hover
   
   // Link Configuration
   link?: string;
