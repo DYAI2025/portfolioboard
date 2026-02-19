@@ -17,7 +17,9 @@ const Tile: React.FC<TileProps> = ({ config }) => {
     icon, 
     value, 
     imageUrl, 
-    videoUrl, 
+    videoUrl,
+    videoThumbnail,
+    backgroundClass,
     link, 
     linkTarget,
     shadows,
@@ -52,16 +54,29 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   }[accentColor || 'white'];
 
   // 2. Surface Gradient (Fallback if no media)
-  const surfaceGradient = active
+  // Logic: If backgroundClass is provided, use it. Otherwise toggle based on active state.
+  const defaultGradient = active
     ? 'bg-gradient-to-b from-[#2e2e2e] to-[#1a1a1a]' 
     : 'bg-gradient-to-b from-[#1c1c1c] to-[#0f0f0f]';
+  
+  const surfaceClass = backgroundClass || defaultGradient;
 
-  // 3. Bevel / Ring
+  // 3. Active Border Color Map
+  const activeBorderClass = {
+    blue: 'ring-blue-400/50',
+    purple: 'ring-violet-400/50',
+    white: 'ring-white/50',
+    orange: 'ring-orange-400/50',
+    green: 'ring-emerald-400/50',
+  }[accentColor || 'white'];
+
+  // 4. Bevel / Ring
+  // Updated: Uses activeBorderClass to color the ring when active
   const bevelClass = active
-    ? 'shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.1),inset_0px_0px_0px_1px_rgba(255,255,255,0.05)] ring-1 ring-white/10'
+    ? `shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.1),inset_0px_0px_0px_1px_rgba(255,255,255,0.05)] ring-1 ${activeBorderClass}`
     : 'shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.08),inset_0px_0px_0px_1px_rgba(255,255,255,0.02)] ring-1 ring-white/5';
 
-  // 4. Ambient Shadow
+  // 5. Ambient Shadow
   const activeShadowClass = {
     blue: 'shadow-[0_0_50px_-12px_rgba(59,130,246,1)]',
     purple: 'shadow-[0_0_50px_-12px_rgba(139,92,246,1)]',
@@ -72,7 +87,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
 
   const shadowClass = active ? activeShadowClass : '';
 
-  // 5. Custom Shadow Stack
+  // 6. Custom Shadow Stack
   const customBoxShadow = (() => {
     if (!shadows) return undefined;
     if (active && shadows.active) return shadows.active;
@@ -80,7 +95,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
     return shadows.default;
   })();
 
-  // 6. Active Tint (Internal overlay)
+  // 7. Active Tint (Internal overlay)
   const activeTintClass = {
     blue: 'from-blue-500/10 to-transparent',
     purple: 'from-violet-500/10 to-transparent',
@@ -92,7 +107,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
   // Animation States
   const glowOpacityState = active 
     ? 'opacity-100 group-hover:opacity-100' 
-    : 'opacity-0 group-hover:opacity-40';
+    : 'opacity-10 group-hover:opacity-40';
   const activeGlowBlur = active ? 'blur-2xl' : 'blur-xl'; 
   const indicatorColor = active ? 'text-white' : 'text-neutral-500';
 
@@ -169,47 +184,68 @@ const Tile: React.FC<TileProps> = ({ config }) => {
 
   // --- SUB-COMPONENT: VISUALIZER ---
   const renderVisualizer = () => {
+    // Common base classes for bars
+    const barBase = "bg-current rounded-full shadow-[0_0_10px_currentColor] transition-all duration-300 ease-in-out";
+
     if (visualizerMode === 'wave') {
       return (
         <div className={`flex items-end gap-[3px] h-5 mb-1 ${indicatorColor}`} title="Wave">
            {[0, 1, 2, 3, 4].map((i) => (
-             <div key={i} className="w-1 bg-current rounded-full animate-wave-slow shadow-[0_0_10px_currentColor]" style={{ animationDelay: `${i * 0.15}s` }} />
+             <div 
+               key={i} 
+               className={`w-1 ${barBase} ${isHovered ? 'animate-wave-slow' : 'h-1.5'}`} 
+               style={isHovered ? { animationDelay: `${i * 0.15}s` } : undefined} 
+             />
            ))}
         </div>
       );
     }
+
     if (visualizerMode === 'spectrum') {
       return (
          <div className={`flex items-end gap-[2px] h-6 mb-1 ${indicatorColor}`} title="Spectrum">
-             <div className="w-[3px] bg-current rounded-full animate-spec-1 shadow-[0_0_5px_currentColor]" />
-             <div className="w-[3px] bg-current rounded-full animate-spec-2 shadow-[0_0_5px_currentColor]" />
-             <div className="w-[3px] bg-current rounded-full animate-spec-4 shadow-[0_0_5px_currentColor]" />
-             <div className="w-[3px] bg-current rounded-full animate-spec-3 shadow-[0_0_5px_currentColor]" />
-             <div className="w-[3px] bg-current rounded-full animate-spec-1 shadow-[0_0_5px_currentColor]" />
-             <div className="w-[3px] bg-current rounded-full animate-spec-4 shadow-[0_0_5px_currentColor]" />
+             {[1, 2, 4, 3, 1, 4].map((n, i) => (
+                <div 
+                  key={i}
+                  className={`w-[3px] ${barBase} ${isHovered ? `animate-spec-${n}` : 'h-1'}`}
+                />
+             ))}
          </div>
       );
     }
+
+    // Default: Bars
     return (
        <div className={`flex items-end gap-1 h-5 mb-1 ${indicatorColor}`} title="Bars">
-           <div className="w-1 bg-current rounded-full animate-eq-1 shadow-[0_0_10px_currentColor]" />
-           <div className="w-1 bg-current rounded-full animate-eq-2 shadow-[0_0_10px_currentColor]" />
-           <div className="w-1 bg-current rounded-full animate-eq-3 shadow-[0_0_10px_currentColor]" />
-           <div className="w-1 bg-current rounded-full animate-eq-4 shadow-[0_0_10px_currentColor]" />
+           {[1, 2, 3, 4].map((n, i) => (
+             <div 
+               key={i} 
+               className={`w-1 ${barBase} ${isHovered ? `animate-eq-${n}` : 'h-1.5'}`}
+             />
+           ))}
        </div>
     );
   };
 
-  const hasBackgroundMedia = Boolean(imageUrl || videoUrl);
+  // Determine which image source to use: explicit thumbnail or generic image url
+  const effectiveImage = videoThumbnail || imageUrl;
+  
+  const hasBackgroundMedia = Boolean(effectiveImage || videoUrl);
   
   // Logic to determine which media layer is visible
   // If video exists and is hovered (or if there's no image to fallback to), show video.
-  const isVideoVisible = videoUrl && (isHovered || !imageUrl);
-  const isImageVisible = imageUrl && !isVideoVisible;
+  const isVideoVisible = videoUrl && (isHovered || !effectiveImage);
+  const isImageVisible = effectiveImage && !isVideoVisible;
+
+  // Determine container background class
+  // If media exists, we default to black to frame it.
+  // Otherwise use the calculated surfaceClass (which supports custom backgroundClass or default gradients)
+  const containerBgClass = hasBackgroundMedia ? 'bg-black' : surfaceClass;
 
   return (
     <div 
-      className={`relative group ${spanClass} select-none`}
+      // Z-Index Strategy: Default z-20. Hover z-10.
+      className={`relative group ${spanClass} select-none z-20 hover:z-10`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -227,7 +263,7 @@ const Tile: React.FC<TileProps> = ({ config }) => {
         className={`
           relative h-full w-full block
           rounded-[24px] 
-          ${hasBackgroundMedia ? 'bg-black' : surfaceGradient}
+          ${containerBgClass}
           ${!customBoxShadow ? bevelClass : ''}
           ${!customBoxShadow ? shadowClass : ''}
           flex flex-col overflow-hidden
@@ -239,10 +275,19 @@ const Tile: React.FC<TileProps> = ({ config }) => {
         style={customBoxShadow ? { boxShadow: customBoxShadow } : undefined}
       >
         
-        {/* 3. Background Media Layer */}
-        {imageUrl && (
+        {/* Matte Noise Texture (High Fidelity Finish) - Z-index 2 */}
+        <div 
+            className="absolute inset-0 z-[2] opacity-[0.04] pointer-events-none mix-blend-overlay"
+            style={{ 
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+                backgroundSize: '128px 128px' 
+            }} 
+        />
+
+        {/* 3. Background Media Layer - Z-index 0 */}
+        {effectiveImage && (
            <img 
-            src={imageUrl} 
+            src={effectiveImage} 
             alt={title} 
             className={`
               absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-0
@@ -265,17 +310,17 @@ const Tile: React.FC<TileProps> = ({ config }) => {
           />
         )}
 
-        {/* 4. Scrim / Tint Layer (Better text readability) */}
+        {/* 4. Scrim / Tint Layer (Better text readability) - Z-index 0 */}
         {hasBackgroundMedia && (
            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0 pointer-events-none" />
         )}
         
-        {/* 5. Active Tint Overlay */}
+        {/* 5. Active Tint Overlay - Z-index 0 */}
         {active && (
           <div className={`absolute inset-0 bg-gradient-to-br ${activeTintClass} pointer-events-none z-0 mix-blend-overlay`} />
         )}
 
-        {/* 6. Foreground Content Layer - Z-Index ensures visibility over media */}
+        {/* 6. Foreground Content Layer - Z-Index 10 ensures visibility over all media/gradients */}
         <div className="flex flex-col justify-between h-full p-5 z-10 relative">
           
           {/* Header Area */}

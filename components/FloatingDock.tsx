@@ -17,7 +17,7 @@ const FloatingDock: React.FC = () => {
         <div className="absolute -inset-4 bg-violet-500/20 blur-2xl -z-10 rounded-full pointer-events-none" />
 
         <div className="flex-1 h-full rounded-[1.5rem] bg-[#1a1a1a] mx-1 flex items-center justify-center border border-white/5 active:bg-[#222] transition-colors cursor-pointer group">
-           <span className="text-neutral-400 text-sm font-medium group-hover:text-white transition-colors">Unlock</span>
+           <span className="text-neutral-400 text-sm font-medium group-hover:text-white transition-colors">Start</span>
         </div>
 
         <div className="w-16 h-12 mx-1 flex items-center justify-center rounded-[1.5rem] bg-[#1a1a1a] border border-white/5 text-neutral-400 hover:text-white hover:bg-[#252525] transition-colors cursor-pointer">
