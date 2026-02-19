@@ -8,9 +8,16 @@ interface TileProps {
   forceHighlight?: boolean;
   isEditing?: boolean;
   onEdit?: (config: TileConfig) => void;
+  onOpenMedia?: (config: TileConfig) => void;
 }
 
-const Tile: React.FC<TileProps> = ({ config, forceHighlight = false, isEditing = false, onEdit }) => {
+const Tile: React.FC<TileProps> = ({ 
+  config, 
+  forceHighlight = false, 
+  isEditing = false, 
+  onEdit,
+  onOpenMedia
+}) => {
   const { 
     size, 
     type, 
@@ -171,6 +178,7 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false, isEditing =
 
     if (link) return;
 
+    // AUDIO TYPE
     if (type === TileType.AUDIO && active) {
       e.preventDefault();
       setVisualizerMode(prev => {
@@ -178,9 +186,18 @@ const Tile: React.FC<TileProps> = ({ config, forceHighlight = false, isEditing =
         if (prev === 'wave') return 'spectrum';
         return 'bars';
       });
+      return;
     }
 
-    if (type === TileType.VIDEO && videoUrl && videoRef.current) {
+    // IMAGE OR VIDEO TYPE (Custom Overlay)
+    if ((type === TileType.IMAGE || type === TileType.VIDEO) && onOpenMedia) {
+       e.preventDefault();
+       onOpenMedia(config);
+       return;
+    }
+
+    // Fallback for native video fullscreen if onOpenMedia isn't provided (backwards compat)
+    if (type === TileType.VIDEO && videoUrl && videoRef.current && !onOpenMedia) {
       e.preventDefault();
       if (videoRef.current.requestFullscreen) {
         videoRef.current.requestFullscreen();

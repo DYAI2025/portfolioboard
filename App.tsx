@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Tile from './components/Tile';
 import FloatingDock from './components/FloatingDock';
 import TileEditor from './components/TileEditor';
+import MediaOverlay from './components/MediaOverlay';
 import { PORTFOLIO_TILES, APP_METADATA } from './constants';
 import { TileConfig } from './types';
 import { initAudio } from './utils/sound';
@@ -15,6 +16,9 @@ const App: React.FC = () => {
   // Edit Mode State
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTileId, setEditingTileId] = useState<string | null>(null);
+
+  // Media Overlay State
+  const [selectedMediaTile, setSelectedMediaTile] = useState<TileConfig | null>(null);
 
   // --- AUDIO INIT ---
   useEffect(() => {
@@ -84,7 +88,7 @@ const App: React.FC = () => {
     setIsSequenceRunning(false);
   };
 
-  // --- EDITING HANDLERS ---
+  // --- HANDLERS ---
   
   const handleEditClick = (tile: TileConfig) => {
     setEditingTileId(tile.id);
@@ -92,6 +96,10 @@ const App: React.FC = () => {
 
   const handleTileUpdate = (updatedTile: TileConfig) => {
     setTiles(prevTiles => prevTiles.map(t => t.id === updatedTile.id ? updatedTile : t));
+  };
+
+  const handleOpenMedia = (tile: TileConfig) => {
+    setSelectedMediaTile(tile);
   };
 
   const activeEditingTile = tiles.find(t => t.id === editingTileId);
@@ -123,12 +131,23 @@ const App: React.FC = () => {
               forceHighlight={highlightedTileId === tileConfig.id}
               isEditing={isEditMode}
               onEdit={handleEditClick}
+              onOpenMedia={handleOpenMedia}
             />
           ))}
         </div>
       </main>
 
-      {/* GUI Editor Modal (Side Panel) */}
+      {/* Overlays & Modals */}
+      
+      {/* 1. Media Viewer */}
+      {selectedMediaTile && (
+        <MediaOverlay 
+          tile={selectedMediaTile} 
+          onClose={() => setSelectedMediaTile(null)} 
+        />
+      )}
+
+      {/* 2. GUI Editor Modal (Side Panel) */}
       {isEditMode && activeEditingTile && (
         <TileEditor 
           tile={activeEditingTile}
