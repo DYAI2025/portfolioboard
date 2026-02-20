@@ -1,22 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TileConfig, TileSize, TileType } from '../types';
 import { playChord } from '../utils/sound';
-import { Edit3, Volume2, VolumeX, Play } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 
 interface TileProps {
   config: TileConfig;
   forceHighlight?: boolean;
-  isEditing?: boolean;
-  onEdit?: (config: TileConfig) => void;
-  onOpenMedia?: (config: TileConfig) => void;
+  isEditMode?: boolean;
+  onTileSelect?: (tile: TileConfig) => void;
 }
 
 const Tile: React.FC<TileProps> = ({ 
   config, 
-  forceHighlight = false, 
-  isEditing = false, 
-  onEdit,
-  onOpenMedia
+  forceHighlight = false,
+  isEditMode = false,
+  onTileSelect,
 }) => {
   const { 
     size, 
@@ -208,8 +206,20 @@ const Tile: React.FC<TileProps> = ({
       e.preventDefault();
       if (videoRef.current.requestFullscreen) {
         videoRef.current.requestFullscreen();
-        videoRef.current.muted = false; 
+        videoRef.current.muted = false;
+      } else if ((videoRef.current as any).webkitRequestFullscreen) {
+        (videoRef.current as any).webkitRequestFullscreen();
+      } else if ((videoRef.current as any).msRequestFullscreen) {
+        (videoRef.current as any).msRequestFullscreen();
       }
+    }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isEditMode && onTileSelect) {
+      onTileSelect(config);
     }
   };
 
@@ -313,11 +323,19 @@ const Tile: React.FC<TileProps> = ({
       : '';
 
   return (
-    <div 
+    <div
       className={`relative group ${spanClass} select-none ${scaleClass} transition-all duration-300`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onDoubleClick={handleDoubleClick}
     >
+      {/* Edit Mode Indicator */}
+      {isEditMode && (
+        <div className="absolute -top-2 -right-2 z-50 w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center shadow-lg animate-in fade-in zoom-in duration-200">
+          <Edit2 size={14} className="text-white" />
+        </div>
+      )}
+
       {/* 1. Backlight Glow Layer */}
       <div 
         className={`absolute inset-0 bg-gradient-to-br ${glowColorClass} rounded-[24px] ${activeGlowBlur} transition-all duration-500 ease-out ${glowOpacityState}`}

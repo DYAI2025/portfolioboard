@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Tile from './components/Tile';
 import FloatingDock from './components/FloatingDock';
 import TileEditor from './components/TileEditor';
-import MediaOverlay from './components/MediaOverlay';
 import { PORTFOLIO_TILES, APP_METADATA } from './constants';
 import { TileConfig } from './types';
 import { initAudio } from './utils/sound';
+import { applyStoredConfigToTiles, updateTileInStorage, EditableTileConfig } from './utils/storage';
+import { TileConfig } from './types';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -13,9 +14,13 @@ const App: React.FC = () => {
   const [highlightedTileId, setHighlightedTileId] = useState<string | null>(null);
   const [isSequenceRunning, setIsSequenceRunning] = useState(false);
   
-  // Edit Mode State
+  // Editor State
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingTileId, setEditingTileId] = useState<string | null>(null);
+  const [selectedTile, setSelectedTile] = useState<TileConfig | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  
+  // Load tiles with stored customizations
+  const [tiles, setTiles] = useState<TileConfig[]>(() => applyStoredConfigToTiles(PORTFOLIO_TILES));
 
   // Media Overlay State
   const [selectedMediaTile, setSelectedMediaTile] = useState<TileConfig | null>(null);
@@ -45,7 +50,7 @@ const App: React.FC = () => {
     setIsSequenceRunning(true);
     initAudio(); 
 
-    // 1. Tone Ladder
+    // 1. Tone Ladder: Play all tiles in order
     for (const tile of tiles) {
       setHighlightedTileId(tile.id);
       await sleep(120);
@@ -54,30 +59,39 @@ const App: React.FC = () => {
     await sleep(200);
 
     // 2. Roulette Selection
+    // Filter only tiles that have a valid link or are actionable projects
+    // We assume a 'valid' link is not just '#' (unless it's a placeholder we want to open)
+    // For this demo, let's include all tiles that act as links or have video
     const candidates = tiles.filter(t => t.link && t.link.length > 1);
     const pool = candidates.length > 0 ? candidates : tiles;
 
     let speed = 40; 
     let lastId = '';
-    
+
+    // Run until speed becomes very slow
+    // The curve: speed * 1.15 exponential slowdown
     while (speed < 700) {
         let randomTile;
         do {
            randomTile = pool[Math.floor(Math.random() * pool.length)];
-        } while (pool.length > 1 && randomTile.id === lastId); 
-        
+        } while (pool.length > 1 && randomTile.id === lastId); // Avoid repeat if possible
+
         setHighlightedTileId(randomTile.id);
         lastId = randomTile.id;
-        
+
         await sleep(speed);
-        
+
+        // Decelerate
+        // If speed is fast, decelerate slowly. If speed is slow, decelerate faster (snap to end)
         if (speed < 100) speed *= 1.1;
         else speed *= 1.2;
     }
 
     // 3. Final Selection
+    // The loop exits with 'lastId' still highlighted.
+    // Wait a moment for the user to register the winner.
     await sleep(800);
-    
+
     const finalTile = tiles.find(t => t.id === lastId);
     if (finalTile?.link) {
       window.open(finalTile.link, finalTile.linkTarget || '_blank');
@@ -88,25 +102,29 @@ const App: React.FC = () => {
     setIsSequenceRunning(false);
   };
 
-  // --- HANDLERS ---
-  
-  const handleEditClick = (tile: TileConfig) => {
-    setEditingTileId(tile.id);
-  };
+  // Editor Handlers
+  const handleTileSelect = useCallback((tile: TileConfig) => {
+    if (isEditMode) {
+      setSelectedTile(tile);
+      setIsEditorOpen(true);
+    }
+  }, [isEditMode]);
 
-  const handleTileUpdate = (updatedTile: TileConfig) => {
-    setTiles(prevTiles => prevTiles.map(t => t.id === updatedTile.id ? updatedTile : t));
-  };
+  const handleSaveTile = useCallback((editableConfig: EditableTileConfig) => {
+    updateTileInStorage(editableConfig);
+    setTiles(prevTiles => applyStoredConfigToTiles(PORTFOLIO_TILES));
+  }, []);
 
-  const handleOpenMedia = (tile: TileConfig) => {
-    setSelectedMediaTile(tile);
-  };
-
-  const activeEditingTile = tiles.find(t => t.id === editingTileId);
+  const handleResetTiles = useCallback(() => {
+    if (window.confirm('Alle Anpassungen zurücksetzen?')) {
+      localStorage.removeItem('lumina-tiles-config');
+      setTiles(PORTFOLIO_TILES);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center py-12 px-4 sm:px-6 selection:bg-violet-500/30">
-      
+
       {/* Ambient Background Light */}
       <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-violet-900/10 blur-[120px] rounded-full pointer-events-none" />
@@ -119,19 +137,23 @@ const App: React.FC = () => {
         <p className="text-neutral-500 text-sm uppercase tracking-[0.2em]">
           {isEditMode ? 'Configuration Mode' : APP_METADATA.subHeader}
         </p>
+        {isEditMode && (
+          <p className="text-violet-400 text-xs mt-3 uppercase tracking-wider">
+            ✏️ Bearbeitungsmodus - Doppelklick auf eine Kachel zum Editieren
+          </p>
+        )}
       </header>
 
       {/* Main Grid Layout */}
       <main className="w-full max-w-[1200px] relative z-10 pb-32">
         <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[160px] md:auto-rows-[180px] gap-4 md:gap-6">
           {tiles.map((tileConfig) => (
-            <Tile 
-              key={tileConfig.id} 
-              config={tileConfig} 
+            <Tile
+              key={tileConfig.id}
+              config={tileConfig}
               forceHighlight={highlightedTileId === tileConfig.id}
-              isEditing={isEditMode}
-              onEdit={handleEditClick}
-              onOpenMedia={handleOpenMedia}
+              isEditMode={isEditMode}
+              onTileSelect={handleTileSelect}
             />
           ))}
         </div>
@@ -159,13 +181,22 @@ const App: React.FC = () => {
       {/* Bottom Floating Control */}
       <FloatingDock 
         onStart={handleStartSequence} 
-        onToggleEdit={() => {
-            setIsEditMode(!isEditMode);
-            setEditingTileId(null);
-        }}
-        isEditing={isEditMode}
+        isEditMode={isEditMode}
+        onToggleEditMode={() => setIsEditMode(!isEditMode)}
+        onResetTiles={handleResetTiles}
       />
-      
+
+      {/* Tile Editor Modal */}
+      <TileEditor
+        tile={selectedTile}
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setSelectedTile(null);
+        }}
+        onSave={handleSaveTile}
+      />
+
     </div>
   );
 };
