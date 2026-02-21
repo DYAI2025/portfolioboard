@@ -5,25 +5,18 @@ import TileEditor from './components/TileEditor';
 import { PORTFOLIO_TILES, APP_METADATA } from './constants';
 import { TileConfig } from './types';
 import { initAudio } from './utils/sound';
-import { applyStoredConfigToTiles, updateTileInStorage, EditableTileConfig } from './utils/storage';
-import { TileConfig } from './types';
+import { applyStoredConfigToTiles, updateTileInStorage, EditableTileConfig, importTilesFromJSON, saveImportedTiles } from './utils/storage';
 
 const App: React.FC = () => {
   // --- STATE ---
-  const [tiles, setTiles] = useState<TileConfig[]>(PORTFOLIO_TILES);
+  const [tiles, setTiles] = useState<TileConfig[]>(() => applyStoredConfigToTiles(PORTFOLIO_TILES));
   const [highlightedTileId, setHighlightedTileId] = useState<string | null>(null);
   const [isSequenceRunning, setIsSequenceRunning] = useState(false);
-  
+
   // Editor State
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTile, setSelectedTile] = useState<TileConfig | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  
-  // Load tiles with stored customizations
-  const [tiles, setTiles] = useState<TileConfig[]>(() => applyStoredConfigToTiles(PORTFOLIO_TILES));
-
-  // Media Overlay State
-  const [selectedMediaTile, setSelectedMediaTile] = useState<TileConfig | null>(null);
 
   // --- AUDIO INIT ---
   useEffect(() => {
@@ -46,9 +39,9 @@ const App: React.FC = () => {
 
   // --- ANIMATION SEQUENCE ---
   const handleStartSequence = async () => {
-    if (isSequenceRunning || isEditMode) return; // Disable animation during edit mode
+    if (isSequenceRunning || isEditMode) return;
     setIsSequenceRunning(true);
-    initAudio(); 
+    initAudio();
 
     // 1. Tone Ladder: Play all tiles in order
     for (const tile of tiles) {
@@ -59,37 +52,27 @@ const App: React.FC = () => {
     await sleep(200);
 
     // 2. Roulette Selection
-    // Filter only tiles that have a valid link or are actionable projects
-    // We assume a 'valid' link is not just '#' (unless it's a placeholder we want to open)
-    // For this demo, let's include all tiles that act as links or have video
     const candidates = tiles.filter(t => t.link && t.link.length > 1);
     const pool = candidates.length > 0 ? candidates : tiles;
 
-    let speed = 40; 
+    let speed = 40;
     let lastId = '';
 
-    // Run until speed becomes very slow
-    // The curve: speed * 1.15 exponential slowdown
     while (speed < 700) {
         let randomTile;
         do {
            randomTile = pool[Math.floor(Math.random() * pool.length)];
-        } while (pool.length > 1 && randomTile.id === lastId); // Avoid repeat if possible
+        } while (pool.length > 1 && randomTile.id === lastId);
 
         setHighlightedTileId(randomTile.id);
         lastId = randomTile.id;
 
         await sleep(speed);
 
-        // Decelerate
-        // If speed is fast, decelerate slowly. If speed is slow, decelerate faster (snap to end)
         if (speed < 100) speed *= 1.1;
         else speed *= 1.2;
     }
 
-    // 3. Final Selection
-    // The loop exits with 'lastId' still highlighted.
-    // Wait a moment for the user to register the winner.
     await sleep(800);
 
     const finalTile = tiles.find(t => t.id === lastId);
@@ -119,6 +102,36 @@ const App: React.FC = () => {
     if (window.confirm('Alle Anpassungen zurücksetzen?')) {
       localStorage.removeItem('lumina-tiles-config');
       setTiles(PORTFOLIO_TILES);
+    }
+  }, []);
+
+  // Export/Import Handlers
+  const handleExportConfig = useCallback(() => {
+    const stored = localStorage.getItem('lumina-tiles-config');
+    if (!stored) {
+      alert('Keine Änderungen zum Exportieren vorhanden. Bearbeite zuerst einige Kacheln.');
+      return;
+    }
+
+    const blob = new Blob([stored], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tiles.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleImportConfig = useCallback((jsonString: string) => {
+    const importedTiles = importTilesFromJSON(jsonString);
+    if (importedTiles.length > 0) {
+      saveImportedTiles(importedTiles);
+      setTiles(applyStoredConfigToTiles(PORTFOLIO_TILES));
+      alert(`✅ ${importedTiles.length} Kachel-Konfigurationen importiert!`);
+    } else {
+      alert('❌ Ungültige JSON-Datei');
     }
   }, []);
 
@@ -159,31 +172,14 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Overlays & Modals */}
-      
-      {/* 1. Media Viewer */}
-      {selectedMediaTile && (
-        <MediaOverlay 
-          tile={selectedMediaTile} 
-          onClose={() => setSelectedMediaTile(null)} 
-        />
-      )}
-
-      {/* 2. GUI Editor Modal (Side Panel) */}
-      {isEditMode && activeEditingTile && (
-        <TileEditor 
-          tile={activeEditingTile}
-          onUpdate={handleTileUpdate}
-          onClose={() => setEditingTileId(null)}
-        />
-      )}
-
       {/* Bottom Floating Control */}
-      <FloatingDock 
-        onStart={handleStartSequence} 
+      <FloatingDock
+        onStart={handleStartSequence}
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         onResetTiles={handleResetTiles}
+        onExportConfig={handleExportConfig}
+        onImportConfig={handleImportConfig}
       />
 
       {/* Tile Editor Modal */}

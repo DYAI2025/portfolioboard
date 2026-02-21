@@ -80,3 +80,32 @@ export const applyStoredConfigToTiles = (defaultTiles: TileConfig[]): TileConfig
 export const resetTilesToDefault = (): void => {
   localStorage.removeItem(STORAGE_KEY);
 };
+
+/**
+ * Exportiert die aktuelle Tile-Konfiguration als JSON-String
+ */
+export const exportTilesToJSON = (): string => {
+  const stored = loadTilesFromStorage();
+  const exported = Array.from(stored.values());
+  return JSON.stringify(exported, null, 2);
+};
+
+/**
+ * Lädt Tile-Konfigurationen aus einem JSON-String
+ */
+export const importTilesFromJSON = (jsonString: string): EditableTileConfig[] => {
+  try {
+    const parsed: EditableTileConfig[] = JSON.parse(jsonString);
+    return parsed;
+  } catch (e) {
+    console.error('Failed to parse JSON:', e);
+    return [];
+  }
+};
+
+/**
+ * Speichert Tile-Konfigurationen aus JSON-Import im LocalStorage
+ */
+export const saveImportedTiles = (tiles: EditableTileConfig[]): void => {
+  saveTilesToStorage(tiles);
+};

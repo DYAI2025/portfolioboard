@@ -1,0 +1,122 @@
+[
+  {
+    "id": "1",
+    "title": "System",
+    "subtitle": "Optimized",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "2",
+    "title": "Status",
+    "subtitle": "Online",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "3",
+    "title": "Photography",
+    "subtitle": "Latest shots",
+    "link": "#",
+    "linkTarget": "_blank",
+    "imageUrl": "https://picsum.photos/seed/photo/400/400?grayscale",
+    "videoUrl": "",
+    "mediaType": "image"
+  },
+  {
+    "id": "4",
+    "title": "Settings",
+    "subtitle": "",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "5",
+    "title": "Design System",
+    "subtitle": "Figma / CSS",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "6",
+    "title": "Search",
+    "subtitle": "",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "7",
+    "title": "Neural Mix",
+    "subtitle": "Focus Playlist",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "8",
+    "title": "Github",
+    "subtitle": "Source Code",
+    "link": "https://github.com",
+    "linkTarget": "_blank",
+    "imageUrl": "https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=400&auto=format&fit=crop",
+    "videoUrl": "",
+    "mediaType": "image"
+  },
+  {
+    "id": "9",
+    "title": "Bazodia",
+    "subtitle": "The Essence",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+    "mediaType": "video"
+  },
+  {
+    "id": "10",
+    "title": "Projects",
+    "subtitle": "",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "11",
+    "title": "Voice",
+    "subtitle": "",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  },
+  {
+    "id": "12",
+    "title": "Terminal",
+    "subtitle": "DeepThink",
+    "link": "",
+    "linkTarget": "_blank",
+    "imageUrl": "",
+    "videoUrl": "",
+    "mediaType": "none"
+  }
+]

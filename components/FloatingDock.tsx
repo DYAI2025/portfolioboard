@@ -1,23 +1,54 @@
-import React from 'react';
-import { Smartphone, Command, Edit2, RotateCcw } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Smartphone, Edit2, RotateCcw, Download, Upload, Play } from 'lucide-react';
 
 interface FloatingDockProps {
   onStart?: () => void;
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
   onResetTiles?: () => void;
+  onExportConfig?: () => void;
+  onImportConfig?: (jsonString: string) => void;
 }
 
-const FloatingDock: React.FC<FloatingDockProps> = ({ 
+const FloatingDock: React.FC<FloatingDockProps> = ({
   onStart,
   isEditMode = false,
   onToggleEditMode,
   onResetTiles,
+  onExportConfig,
+  onImportConfig,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      onImportConfig?.(content);
+    };
+    reader.readAsText(file);
+  };
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[360px] px-4">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[420px] px-4">
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
       <div className="
-        relative 
+        relative
         flex items-center justify-between
         h-16 px-2
         bg-[#0a0a0a]/80 backdrop-blur-xl
@@ -32,8 +63,8 @@ const FloatingDock: React.FC<FloatingDockProps> = ({
         <div
           onClick={onToggleEditMode}
           className={`h-full rounded-[1.5rem] mx-1 flex items-center justify-center border transition-all cursor-pointer ${
-            isEditMode 
-              ? 'bg-violet-600 border-violet-500 text-white' 
+            isEditMode
+              ? 'bg-violet-600 border-violet-500 text-white'
               : 'bg-[#1a1a1a] border-white/5 text-neutral-400 hover:bg-[#222] hover:text-white'
           }`}
           style={{ flex: '0 0 auto', width: '56px' }}
@@ -41,6 +72,30 @@ const FloatingDock: React.FC<FloatingDockProps> = ({
         >
            <Edit2 size={18} />
         </div>
+
+        {/* Export Button (only visible in edit mode) */}
+        {isEditMode && (
+          <div
+            onClick={onExportConfig}
+            className="h-full rounded-[1.5rem] mx-1 flex items-center justify-center border border-white/5 bg-[#1a1a1a] text-neutral-400 hover:text-green-400 hover:bg-[#222] transition-colors cursor-pointer"
+            style={{ flex: '0 0 auto', width: '56px' }}
+            title="Config exportieren (tiles.json)"
+          >
+            <Download size={18} />
+          </div>
+        )}
+
+        {/* Import Button (only visible in edit mode) */}
+        {isEditMode && (
+          <div
+            onClick={handleImportClick}
+            className="h-full rounded-[1.5rem] mx-1 flex items-center justify-center border border-white/5 bg-[#1a1a1a] text-neutral-400 hover:text-blue-400 hover:bg-[#222] transition-colors cursor-pointer"
+            style={{ flex: '0 0 auto', width: '56px' }}
+            title="Config importieren (tiles.json)"
+          >
+            <Upload size={18} />
+          </div>
+        )}
 
         {/* Start Button */}
         <div
@@ -62,18 +117,11 @@ const FloatingDock: React.FC<FloatingDockProps> = ({
             <RotateCcw size={18} />
           </div>
         )}
-
-        {/* Command Button (hidden in edit mode) */}
-        {!isEditMode && (
-          <div className="w-16 h-12 mx-1 flex items-center justify-center rounded-[1.5rem] bg-[#1a1a1a] border border-white/5 text-neutral-400 hover:text-white hover:bg-[#252525] transition-colors cursor-pointer">
-             <Command size={20} />
-          </div>
-        )}
       </div>
 
       <div className="text-center mt-3">
         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900/50 border border-white/5 text-[10px] text-neutral-500 uppercase tracking-widest">
-           <Smartphone size={10} /> {isEditing ? 'EDIT MODE ACTIVE' : '16 PRO MAX UI'}
+           <Smartphone size={10} /> {isEditMode ? 'EDIT MODE ACTIVE' : '16 PRO MAX UI'}
         </span>
       </div>
     </div>
