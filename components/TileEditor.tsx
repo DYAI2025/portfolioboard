@@ -1,390 +1,314 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { TileConfig, EditableTileConfig } from '../types';
-import { X, Save, Image as ImageIcon, Video, Link as LinkIcon, Upload } from 'lucide-react';
+import React, { useRef } from 'react';
+import { TileConfig, TileSize, TileType } from '../types';
+import { X, Check, LayoutGrid, Type, Image as ImageIcon, Video, AlignCenter, AlignLeft, AlignRight, Clapperboard, Upload, Eye, EyeOff, Palette } from 'lucide-react';
 
 interface TileEditorProps {
-  tile: TileConfig | null;
-  isOpen: boolean;
+  tile: TileConfig;
+  onUpdate: (updatedTile: TileConfig) => void;
   onClose: () => void;
-  onSave: (config: EditableTileConfig) => void;
 }
 
-const TileEditor: React.FC<TileEditorProps> = ({ tile, isOpen, onClose, onSave }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<EditableTileConfig>({
-    id: '',
-    title: '',
-    subtitle: '',
-    link: '',
-    linkTarget: '_blank',
-    imageUrl: '',
-    videoUrl: '',
-    mediaType: 'none',
-  });
-
-  useEffect(() => {
-    if (tile) {
-      const mediaType: 'none' | 'image' | 'video' = tile.videoUrl 
-        ? 'video' 
-        : tile.imageUrl 
-          ? 'image' 
-          : 'none';
-
-      setFormData({
-        id: tile.id,
-        title: tile.title || '',
-        subtitle: tile.subtitle || '',
-        link: tile.link || '',
-        linkTarget: tile.linkTarget || '_blank',
-        imageUrl: tile.imageUrl || '',
-        videoUrl: tile.videoUrl || '',
-        mediaType,
-      });
-    }
-  }, [tile]);
-
-  // Convert file to Base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
+const TileEditor: React.FC<TileEditorProps> = ({ tile, onUpdate, onClose }) => {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleChange = (field: keyof TileConfig, value: any) => {
+    onUpdate({ ...tile, [field]: value });
   };
 
-  // Handle image upload
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'imageUrl' | 'videoUrl') => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Bitte nur Bilddateien hochladen (JPG, PNG, WebP, GIF)');
-      return;
-    }
-
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadError('Bild darf maximal 2MB groß sein');
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadError(null);
-
-    try {
-      const base64 = await fileToBase64(file);
-      setFormData((prev) => ({
-        ...prev,
-        imageUrl: base64,
-        mediaType: 'image',
-      }));
-    } catch (error) {
-      setUploadError('Fehler beim Hochladen des Bildes');
-      console.error('Upload error:', error);
-    } finally {
-      setIsUploading(false);
+    if (file) {
+      // Create a local URL for the uploaded file
+      const url = URL.createObjectURL(file);
+      handleChange(field, url);
     }
   };
 
-  // Trigger file input click
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleChange = (
-    field: keyof EditableTileConfig,
-    value: string
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleMediaTypeChange = (type: 'none' | 'image' | 'video') => {
-    setUploadError(null);
-    setFormData((prev) => ({
-      ...prev,
-      mediaType: type,
-      // Clear the other media URL when switching
-      imageUrl: type === 'image' ? prev.imageUrl : '',
-      videoUrl: type === 'video' ? prev.videoUrl : '',
-    }));
-  };
-
-  // Clear upload state when closing
-  useEffect(() => {
-    if (!isOpen) {
-      setUploadError(null);
-      setIsUploading(false);
+  const getColorStyles = (color: string) => {
+    switch (color) {
+      case 'blue': return 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]';
+      case 'purple': return 'bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.6)]';
+      case 'white': return 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.6)]';
+      case 'orange': return 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)]';
+      case 'green': return 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]';
+      default: return 'bg-neutral-500';
     }
-  }, [isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-    onClose();
   };
-
-  if (!isOpen || !tile) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Editor Panel */}
-      <div className="relative w-full max-w-lg bg-[#1a1a1a] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Tile bearbeiten</h2>
-            <p className="text-sm text-neutral-400 mt-1">ID: {tile.id}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-white/10 transition-colors text-neutral-400 hover:text-white"
-          >
-            <X size={20} />
-          </button>
+    <div className="fixed inset-y-0 right-0 w-full md:w-[400px] z-[100] bg-[#0a0a0a]/90 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col transition-transform duration-300 ease-out animate-in slide-in-from-right">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
+        <div>
+          <h2 className="text-xl font-light text-white tracking-tight">Edit Tile</h2>
+          <p className="text-xs text-neutral-500 uppercase tracking-wider mt-1">ID: {tile.id}</p>
         </div>
+        <button 
+          onClick={onClose}
+          className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-          
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-300 mb-2">
-              Titel
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => handleChange('title', e.target.value)}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-              placeholder="z.B. Photography"
-            />
-          </div>
-
-          {/* Subtitle */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-300 mb-2">
-              Subtext
-            </label>
-            <input
-              type="text"
-              value={formData.subtitle}
-              onChange={(e) => handleChange('subtitle', e.target.value)}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-              placeholder="z.B. Latest shots"
-            />
-          </div>
-
-          {/* Link */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-300 mb-2">
-              <LinkIcon size={16} className="inline mr-2 -mt-0.5" />
-              Link URL
-            </label>
-            <input
-              type="url"
-              value={formData.link}
-              onChange={(e) => handleChange('link', e.target.value)}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-              placeholder="https://example.com"
-            />
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-neutral-300 mb-2">
-                Link Ziel
-              </label>
-              <select
-                value={formData.linkTarget}
-                onChange={(e) => handleChange('linkTarget', e.target.value as any)}
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-              >
-                <option value="_blank">_blank (neuer Tab)</option>
-                <option value="_self">_self (gleicher Tab)</option>
-                <option value="_parent">_parent (Parent Frame)</option>
-                <option value="_top">_top (Top Frame)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Media Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-300 mb-3">
-              Hintergrund-Medium
-            </label>
-            <div className="flex gap-2">
+      {/* Scrollable Form */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        
+        {/* Section: Layout */}
+        <div className="space-y-4">
+          <label className="flex items-center gap-2 text-xs font-semibold text-neutral-500 uppercase tracking-widest">
+            <LayoutGrid size={14} /> Layout & Size
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {Object.values(TileSize).map((size) => (
               <button
-                type="button"
-                onClick={() => handleMediaTypeChange('none')}
-                className={`flex-1 px-4 py-3 rounded-xl border transition-all ${
-                  formData.mediaType === 'none'
-                    ? 'bg-violet-600 border-violet-500 text-white'
-                    : 'bg-[#0a0a0a] border-white/10 text-neutral-400 hover:border-white/20'
-                }`}
-              >
-                Kein Medium
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMediaTypeChange('image')}
-                className={`flex-1 px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 ${
-                  formData.mediaType === 'image'
-                    ? 'bg-violet-600 border-violet-500 text-white'
-                    : 'bg-[#0a0a0a] border-white/10 text-neutral-400 hover:border-white/20'
-                }`}
-              >
-                <ImageIcon size={18} />
-                Image
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMediaTypeChange('video')}
-                className={`flex-1 px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 ${
-                  formData.mediaType === 'video'
-                    ? 'bg-violet-600 border-violet-500 text-white'
-                    : 'bg-[#0a0a0a] border-white/10 text-neutral-400 hover:border-white/20'
-                }`}
-              >
-                <Video size={18} />
-                Video
-              </button>
-            </div>
-          </div>
-
-          {/* Image URL */}
-          {formData.mediaType === 'image' && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-              <label className="block text-sm font-medium text-neutral-300 mb-2">
-                Bild hochladen oder URL einfügen
-              </label>
-              
-              {/* Upload Area */}
-              <div
-                onClick={triggerFileInput}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file && file.type.startsWith('image/')) {
-                    const event = { target: { files: [file] } } as any;
-                    handleImageUpload(event);
-                  }
-                }}
+                key={size}
+                onClick={() => handleChange('size', size)}
                 className={`
-                  relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer
-                  transition-all duration-200
-                  ${isUploading 
-                    ? 'border-violet-500 bg-violet-500/10' 
-                    : 'border-white/10 hover:border-violet-500/50 hover:bg-white/5'
+                  h-12 rounded-xl border flex items-center justify-center text-sm font-medium transition-all
+                  ${tile.size === size 
+                    ? 'bg-violet-500/20 border-violet-500/50 text-violet-200' 
+                    : 'bg-[#1a1a1a] border-white/5 text-neutral-400 hover:bg-[#222]'
                   }
                 `}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={isUploading}
-                />
-                
-                {isUploading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-violet-400">Bild wird geladen...</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload size={24} className="text-neutral-400" />
-                    <span className="text-sm text-neutral-400">
-                      Bild hier ablegen oder <span className="text-violet-400">klicken zum Auswählen</span>
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      JPG, PNG, WebP, GIF (max. 2MB)
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Upload Error */}
-              {uploadError && (
-                <p className="mt-2 text-sm text-red-400">{uploadError}</p>
-              )}
-
-              {/* URL Input (Alternative) */}
-              <div className="mt-4">
-                <label className="block text-xs text-neutral-400 mb-2">
-                  Oder Bild-URL einfügen
-                </label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => handleChange('imageUrl', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all text-sm"
-                  placeholder="https://example.com/bild.jpg"
-                />
-              </div>
-
-              {/* Preview */}
-              {formData.imageUrl && (
-                <div className="mt-3 rounded-lg overflow-hidden border border-white/10">
-                  <img
-                    src={formData.imageUrl}
-                    alt="Preview"
-                    className="w-full h-32 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23333" width="100" height="100"/%3E%3Ctext fill="%23666" x="50%" y="50%" text-anchor="middle" dy=".3em"%3ENo image%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Video URL */}
-          {formData.mediaType === 'video' && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-              <label className="block text-sm font-medium text-neutral-300 mb-2">
-                Video URL (MP4/WebM)
-              </label>
-              <input
-                type="url"
-                value={formData.videoUrl}
-                onChange={(e) => handleChange('videoUrl', e.target.value)}
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                placeholder="https://example.com/video.mp4"
-              />
-              <p className="text-xs text-neutral-500 mt-2">
-                Das Video wird bei Hover tonlos abgespielt und automatisch an die Kachelgröße angepasst.
-              </p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-white/10">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl bg-[#0a0a0a] border border-white/10 text-neutral-300 hover:text-white hover:border-white/20 transition-all"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium transition-all flex items-center justify-center gap-2"
-            >
-              <Save size={18} />
-              Speichern
-            </button>
+                {size}
+              </button>
+            ))}
           </div>
-        </form>
+        </div>
+
+        {/* Section: Content */}
+        <div className="space-y-4">
+          <label className="flex items-center gap-2 text-xs font-semibold text-neutral-500 uppercase tracking-widest">
+            <Type size={14} /> Content
+          </label>
+          
+          <div className="space-y-3">
+            <div className="group relative">
+              <input
+                type="text"
+                value={tile.title || ''}
+                onChange={(e) => handleChange('title', e.target.value)}
+                placeholder=" "
+                className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 pt-5 pb-2 text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all peer"
+              />
+              <label className="absolute left-4 top-3.5 text-neutral-500 text-xs transition-all peer-focus:top-1.5 peer-focus:text-[10px] peer-not-placeholder-shown:top-1.5 peer-not-placeholder-shown:text-[10px]">
+                Title
+              </label>
+            </div>
+
+            <div className="group relative">
+              <input
+                type="text"
+                value={tile.subtitle || ''}
+                onChange={(e) => handleChange('subtitle', e.target.value)}
+                placeholder=" "
+                className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 pt-5 pb-2 text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all peer"
+              />
+              <label className="absolute left-4 top-3.5 text-neutral-500 text-xs transition-all peer-focus:top-1.5 peer-focus:text-[10px] peer-not-placeholder-shown:top-1.5 peer-not-placeholder-shown:text-[10px]">
+                Subtitle
+              </label>
+            </div>
+
+            {/* Text Alignment */}
+            <div className="flex items-center justify-between bg-[#1a1a1a] p-2 rounded-xl border border-white/5">
+                <span className="text-xs text-neutral-400 ml-2">Text Alignment</span>
+                <div className="flex gap-1">
+                    <button 
+                        onClick={() => handleChange('textAlign', 'left')}
+                        className={`p-2 rounded-lg transition-colors ${!tile.textAlign || tile.textAlign === 'left' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-white'}`}
+                    >
+                        <AlignLeft size={16} />
+                    </button>
+                    <button 
+                        onClick={() => handleChange('textAlign', 'center')}
+                        className={`p-2 rounded-lg transition-colors ${tile.textAlign === 'center' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-white'}`}
+                    >
+                        <AlignCenter size={16} />
+                    </button>
+                    <button 
+                        onClick={() => handleChange('textAlign', 'right')}
+                        className={`p-2 rounded-lg transition-colors ${tile.textAlign === 'right' ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-white'}`}
+                    >
+                        <AlignRight size={16} />
+                    </button>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Appearance */}
+        <div className="space-y-4">
+          <label className="flex items-center gap-2 text-xs font-semibold text-neutral-500 uppercase tracking-widest">
+            <Palette size={14} /> Style & Color
+          </label>
+          
+          <div className="flex flex-wrap gap-3 p-4 bg-[#1a1a1a] border border-white/5 rounded-xl">
+             {(['blue', 'purple', 'white', 'orange', 'green'] as const).map((color) => (
+                <button
+                  key={color}
+                  onClick={() => handleChange('accentColor', color)}
+                  className={`
+                    w-10 h-10 rounded-full flex items-center justify-center transition-all relative
+                    ${tile.accentColor === color 
+                      ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a] scale-110' 
+                      : 'opacity-60 hover:opacity-100 hover:scale-105'
+                    }
+                  `}
+                  title={color.charAt(0).toUpperCase() + color.slice(1)}
+                >
+                   <div className={`w-full h-full rounded-full ${getColorStyles(color)}`} />
+                   {tile.accentColor === color && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Check size={14} className="text-black/50 font-bold" />
+                      </div>
+                   )}
+                </button>
+             ))}
+          </div>
+
+          <div 
+             onClick={() => handleChange('active', !tile.active)}
+             className={`
+               flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all
+               ${tile.active
+                 ? 'bg-neutral-900 border-white/20' 
+                 : 'bg-[#1a1a1a] border-white/5 hover:bg-[#222]'
+               }
+             `}
+          >
+             <div className="flex flex-col">
+                <span className="text-sm font-medium text-white ml-1">Active Highlight</span>
+                <span className="text-[10px] text-neutral-500 ml-1">Shows accent glow and border</span>
+             </div>
+             <div className={`w-10 h-5 rounded-full relative transition-colors ${tile.active ? 'bg-violet-500' : 'bg-neutral-700'}`}>
+                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform duration-300 ${tile.active ? 'left-6' : 'left-1'}`} />
+             </div>
+          </div>
+        </div>
+
+        {/* Section: Media */}
+        <div className="space-y-4">
+          <label className="flex items-center gap-2 text-xs font-semibold text-neutral-500 uppercase tracking-widest">
+            <ImageIcon size={14} /> Media Source
+          </label>
+          
+          {/* Visibility Toggle */}
+          <div 
+             onClick={() => handleChange('showMediaOnHoverOnly', !tile.showMediaOnHoverOnly)}
+             className={`
+               flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all
+               ${tile.showMediaOnHoverOnly 
+                 ? 'bg-neutral-900 border-white/20' 
+                 : 'bg-[#1a1a1a] border-white/5 hover:bg-[#222]'
+               }
+             `}
+          >
+             <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${tile.showMediaOnHoverOnly ? 'bg-white/10 text-white' : 'bg-black text-neutral-500'}`}>
+                   {tile.showMediaOnHoverOnly ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </div>
+                <div className="flex flex-col">
+                   <span className="text-sm font-medium text-white">Reveal on Hover</span>
+                   <span className="text-[10px] text-neutral-500">
+                     {tile.showMediaOnHoverOnly ? 'Media hidden until interaction' : 'Media always visible'}
+                   </span>
+                </div>
+             </div>
+             <div className={`w-10 h-5 rounded-full relative transition-colors ${tile.showMediaOnHoverOnly ? 'bg-violet-500' : 'bg-neutral-700'}`}>
+                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform duration-300 ${tile.showMediaOnHoverOnly ? 'left-6' : 'left-1'}`} />
+             </div>
+          </div>
+
+          <div className="space-y-3">
+             {/* Image Upload */}
+             <div className="flex gap-2">
+                 <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600">
+                        <ImageIcon size={16} />
+                    </span>
+                    <input
+                        type="text"
+                        value={tile.imageUrl || ''}
+                        onChange={(e) => handleChange('imageUrl', e.target.value)}
+                        placeholder="Image URL"
+                        className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500/50 transition-all placeholder:text-neutral-700"
+                    />
+                 </div>
+                 <input 
+                    type="file" 
+                    ref={imageInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'imageUrl')}
+                 />
+                 <button 
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-12 rounded-xl bg-[#1a1a1a] border border-white/10 flex items-center justify-center hover:bg-[#222] hover:text-white text-neutral-500 transition-colors"
+                    title="Upload Image"
+                 >
+                    <Upload size={18} />
+                 </button>
+             </div>
+             
+             {/* Video Upload */}
+             <div className="flex gap-2">
+                 <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600">
+                        <Video size={16} />
+                    </span>
+                    <input
+                        type="text"
+                        value={tile.videoUrl || ''}
+                        onChange={(e) => handleChange('videoUrl', e.target.value)}
+                        placeholder="Video URL"
+                        className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500/50 transition-all placeholder:text-neutral-700"
+                    />
+                 </div>
+                 <input 
+                    type="file" 
+                    ref={videoInputRef} 
+                    className="hidden" 
+                    accept="video/*"
+                    onChange={(e) => handleFileUpload(e, 'videoUrl')}
+                 />
+                 <button 
+                    onClick={() => videoInputRef.current?.click()}
+                    className="w-12 rounded-xl bg-[#1a1a1a] border border-white/10 flex items-center justify-center hover:bg-[#222] hover:text-white text-neutral-500 transition-colors"
+                    title="Upload Video"
+                 >
+                    <Upload size={18} />
+                 </button>
+             </div>
+
+             <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600">
+                    <Clapperboard size={16} />
+                </span>
+                <input
+                    type="text"
+                    value={tile.videoThumbnail || ''}
+                    onChange={(e) => handleChange('videoThumbnail', e.target.value)}
+                    placeholder="Video Thumbnail (Optional)"
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500/50 transition-all placeholder:text-neutral-700"
+                />
+             </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div className="p-6 border-t border-white/5 bg-[#050505]">
+        <button 
+          onClick={onClose}
+          className="w-full py-3 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
+        >
+          <Check size={18} /> Done
+        </button>
       </div>
     </div>
   );

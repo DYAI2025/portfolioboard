@@ -1,20 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TileConfig, TileSize, TileType } from '../types';
 import { playChord } from '../utils/sound';
-import { Edit2 } from 'lucide-react';
+import { Edit3, Volume2, VolumeX, Play } from 'lucide-react';
 
 interface TileProps {
   config: TileConfig;
   forceHighlight?: boolean;
-  isEditMode?: boolean;
-  onTileSelect?: (tile: TileConfig) => void;
+  isEditing?: boolean;
+  onEdit?: (config: TileConfig) => void;
+  onOpenMedia?: (config: TileConfig) => void;
 }
 
 const Tile: React.FC<TileProps> = ({ 
   config, 
-  forceHighlight = false,
-  isEditMode = false,
-  onTileSelect,
+  forceHighlight = false, 
+  isEditing = false, 
+  onEdit,
+  onOpenMedia
 }) => {
   const { 
     size, 
@@ -121,9 +123,12 @@ const Tile: React.FC<TileProps> = ({
   // Animation States
   const glowOpacityState = (active || isEffectiveHover)
     ? 'opacity-100 saturate-200'
-    : 'opacity-0 group-hover:opacity-40';
+    : 'opacity-0 group-hover:opacity-60 group-hover:saturate-150';
   
-  const activeGlowBlur = (active || isEffectiveHover) ? 'blur-3xl' : 'blur-xl'; 
+  const activeGlowBlur = (active || isEffectiveHover) 
+    ? 'blur-3xl' 
+    : 'blur-xl group-hover:blur-2xl'; 
+    
   const indicatorColor = (active || isEffectiveHover) ? 'text-white' : 'text-neutral-500';
 
   // --- INTERACTION ---
@@ -145,13 +150,6 @@ const Tile: React.FC<TileProps> = ({
       setIsPlaying(false);
     }
   }, [isEffectiveHover]);
-
-  // Sync mute state
-  useEffect(() => {
-    if (videoRef.current) {
-        videoRef.current.muted = isMuted;
-    }
-  }, [isMuted]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -206,20 +204,8 @@ const Tile: React.FC<TileProps> = ({
       e.preventDefault();
       if (videoRef.current.requestFullscreen) {
         videoRef.current.requestFullscreen();
-        videoRef.current.muted = false;
-      } else if ((videoRef.current as any).webkitRequestFullscreen) {
-        (videoRef.current as any).webkitRequestFullscreen();
-      } else if ((videoRef.current as any).msRequestFullscreen) {
-        (videoRef.current as any).msRequestFullscreen();
+        setIsMuted(false); // Unmute on fullscreen for better experience
       }
-    }
-  };
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isEditMode && onTileSelect) {
-      onTileSelect(config);
     }
   };
 
@@ -307,8 +293,8 @@ const Tile: React.FC<TileProps> = ({
     : '';
 
   const scaleClass = isEffectiveHover 
-    ? '-translate-y-1 scale-[1.01] z-30' 
-    : 'group-hover:-translate-y-1 group-hover:scale-[1.01] z-20 hover:z-30';
+    ? '-translate-y-2 scale-[1.02] z-40' 
+    : 'hover:-translate-y-2 hover:scale-[1.02] z-20 hover:z-40';
 
   const textAlignClass = {
     left: 'text-left items-start',
@@ -323,19 +309,11 @@ const Tile: React.FC<TileProps> = ({
       : '';
 
   return (
-    <div
-      className={`relative group ${spanClass} select-none ${scaleClass} transition-all duration-300`}
+    <div 
+      className={`relative group ${spanClass} select-none ${scaleClass} transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onDoubleClick={handleDoubleClick}
     >
-      {/* Edit Mode Indicator */}
-      {isEditMode && (
-        <div className="absolute -top-2 -right-2 z-50 w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center shadow-lg animate-in fade-in zoom-in duration-200">
-          <Edit2 size={14} className="text-white" />
-        </div>
-      )}
-
       {/* 1. Backlight Glow Layer */}
       <div 
         className={`absolute inset-0 bg-gradient-to-br ${glowColorClass} rounded-[24px] ${activeGlowBlur} transition-all duration-500 ease-out ${glowOpacityState}`}
@@ -398,7 +376,7 @@ const Tile: React.FC<TileProps> = ({
           <video 
             ref={videoRef}
             src={videoUrl} 
-            muted 
+            muted={isMuted}
             loop 
             playsInline
             onPlaying={() => setIsPlaying(true)}
@@ -471,10 +449,10 @@ const Tile: React.FC<TileProps> = ({
              <div 
                role="button"
                onClick={toggleMute}
-               className="absolute top-5 right-5 z-40 p-2 rounded-full bg-black/20 text-white/70 hover:bg-black/40 hover:text-white backdrop-blur-xl border border-white/10 transition-all duration-200 hover:scale-110 active:scale-95 group/mute animate-in fade-in zoom-in"
+               className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/40 text-white/90 hover:bg-white/20 hover:text-white backdrop-blur-md border border-white/10 shadow-lg transition-all duration-300 ease-out hover:scale-110 active:scale-95 group/mute animate-in fade-in zoom-in"
                title={isMuted ? "Unmute" : "Mute"}
              >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
              </div>
           )}
 

@@ -50,8 +50,6 @@
               'spec-2': 'spectrum 0.7s ease-in-out infinite',
               'spec-3': 'spectrum 0.6s ease-in-out infinite',
               'spec-4': 'spectrum 0.8s ease-in-out infinite',
-              'spec-5': 'spectrum 0.5s ease-in-out infinite',
-              'spec-6': 'spectrum 0.7s ease-in-out infinite',
             }
           }
         }
@@ -78,9 +76,20 @@
         background: #404040;
       }
     </style>
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "lucide-react": "https://esm.sh/lucide-react@^0.574.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>

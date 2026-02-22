@@ -1,22 +1,24 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import Tile from './components/Tile';
 import FloatingDock from './components/FloatingDock';
 import TileEditor from './components/TileEditor';
+import MediaOverlay from './components/MediaOverlay';
 import { PORTFOLIO_TILES, APP_METADATA } from './constants';
 import { TileConfig } from './types';
 import { initAudio } from './utils/sound';
-import { applyStoredConfigToTiles, updateTileInStorage, EditableTileConfig, importTilesFromJSON, saveImportedTiles } from './utils/storage';
 
 const App: React.FC = () => {
   // --- STATE ---
-  const [tiles, setTiles] = useState<TileConfig[]>(() => applyStoredConfigToTiles(PORTFOLIO_TILES));
+  const [tiles, setTiles] = useState<TileConfig[]>(PORTFOLIO_TILES);
   const [highlightedTileId, setHighlightedTileId] = useState<string | null>(null);
   const [isSequenceRunning, setIsSequenceRunning] = useState(false);
-
-  // Editor State
+  
+  // Edit Mode State
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedTile, setSelectedTile] = useState<TileConfig | null>(null);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingTileId, setEditingTileId] = useState<string | null>(null);
+
+  // Media Overlay State
+  const [selectedMediaTile, setSelectedMediaTile] = useState<TileConfig | null>(null);
 
   // --- AUDIO INIT ---
   useEffect(() => {
@@ -39,11 +41,11 @@ const App: React.FC = () => {
 
   // --- ANIMATION SEQUENCE ---
   const handleStartSequence = async () => {
-    if (isSequenceRunning || isEditMode) return;
+    if (isSequenceRunning || isEditMode) return; // Disable animation during edit mode
     setIsSequenceRunning(true);
-    initAudio();
+    initAudio(); 
 
-    // 1. Tone Ladder: Play all tiles in order
+    // 1. Tone Ladder
     for (const tile of tiles) {
       setHighlightedTileId(tile.id);
       await sleep(120);
@@ -55,26 +57,27 @@ const App: React.FC = () => {
     const candidates = tiles.filter(t => t.link && t.link.length > 1);
     const pool = candidates.length > 0 ? candidates : tiles;
 
-    let speed = 40;
+    let speed = 40; 
     let lastId = '';
-
+    
     while (speed < 700) {
         let randomTile;
         do {
            randomTile = pool[Math.floor(Math.random() * pool.length)];
-        } while (pool.length > 1 && randomTile.id === lastId);
-
+        } while (pool.length > 1 && randomTile.id === lastId); 
+        
         setHighlightedTileId(randomTile.id);
         lastId = randomTile.id;
-
+        
         await sleep(speed);
-
+        
         if (speed < 100) speed *= 1.1;
         else speed *= 1.2;
     }
 
+    // 3. Final Selection
     await sleep(800);
-
+    
     const finalTile = tiles.find(t => t.id === lastId);
     if (finalTile?.link) {
       window.open(finalTile.link, finalTile.linkTarget || '_blank');
@@ -85,59 +88,25 @@ const App: React.FC = () => {
     setIsSequenceRunning(false);
   };
 
-  // Editor Handlers
-  const handleTileSelect = useCallback((tile: TileConfig) => {
-    if (isEditMode) {
-      setSelectedTile(tile);
-      setIsEditorOpen(true);
-    }
-  }, [isEditMode]);
+  // --- HANDLERS ---
+  
+  const handleEditClick = (tile: TileConfig) => {
+    setEditingTileId(tile.id);
+  };
 
-  const handleSaveTile = useCallback((editableConfig: EditableTileConfig) => {
-    updateTileInStorage(editableConfig);
-    setTiles(prevTiles => applyStoredConfigToTiles(PORTFOLIO_TILES));
-  }, []);
+  const handleTileUpdate = (updatedTile: TileConfig) => {
+    setTiles(prevTiles => prevTiles.map(t => t.id === updatedTile.id ? updatedTile : t));
+  };
 
-  const handleResetTiles = useCallback(() => {
-    if (window.confirm('Alle Anpassungen zurücksetzen?')) {
-      localStorage.removeItem('lumina-tiles-config');
-      setTiles(PORTFOLIO_TILES);
-    }
-  }, []);
+  const handleOpenMedia = (tile: TileConfig) => {
+    setSelectedMediaTile(tile);
+  };
 
-  // Export/Import Handlers
-  const handleExportConfig = useCallback(() => {
-    const stored = localStorage.getItem('lumina-tiles-config');
-    if (!stored) {
-      alert('Keine Änderungen zum Exportieren vorhanden. Bearbeite zuerst einige Kacheln.');
-      return;
-    }
-
-    const blob = new Blob([stored], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'tiles.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, []);
-
-  const handleImportConfig = useCallback((jsonString: string) => {
-    const importedTiles = importTilesFromJSON(jsonString);
-    if (importedTiles.length > 0) {
-      saveImportedTiles(importedTiles);
-      setTiles(applyStoredConfigToTiles(PORTFOLIO_TILES));
-      alert(`✅ ${importedTiles.length} Kachel-Konfigurationen importiert!`);
-    } else {
-      alert('❌ Ungültige JSON-Datei');
-    }
-  }, []);
+  const activeEditingTile = tiles.find(t => t.id === editingTileId);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center py-12 px-4 sm:px-6 selection:bg-violet-500/30">
-
+      
       {/* Ambient Background Light */}
       <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-violet-900/10 blur-[120px] rounded-full pointer-events-none" />
@@ -150,49 +119,53 @@ const App: React.FC = () => {
         <p className="text-neutral-500 text-sm uppercase tracking-[0.2em]">
           {isEditMode ? 'Configuration Mode' : APP_METADATA.subHeader}
         </p>
-        {isEditMode && (
-          <p className="text-violet-400 text-xs mt-3 uppercase tracking-wider">
-            ✏️ Bearbeitungsmodus - Doppelklick auf eine Kachel zum Editieren
-          </p>
-        )}
       </header>
 
       {/* Main Grid Layout */}
       <main className="w-full max-w-[1200px] relative z-10 pb-32">
         <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[160px] md:auto-rows-[180px] gap-4 md:gap-6">
           {tiles.map((tileConfig) => (
-            <Tile
-              key={tileConfig.id}
-              config={tileConfig}
+            <Tile 
+              key={tileConfig.id} 
+              config={tileConfig} 
               forceHighlight={highlightedTileId === tileConfig.id}
-              isEditMode={isEditMode}
-              onTileSelect={handleTileSelect}
+              isEditing={isEditMode}
+              onEdit={handleEditClick}
+              onOpenMedia={handleOpenMedia}
             />
           ))}
         </div>
       </main>
 
+      {/* Overlays & Modals */}
+      
+      {/* 1. Media Viewer */}
+      {selectedMediaTile && (
+        <MediaOverlay 
+          tile={selectedMediaTile} 
+          onClose={() => setSelectedMediaTile(null)} 
+        />
+      )}
+
+      {/* 2. GUI Editor Modal (Side Panel) */}
+      {isEditMode && activeEditingTile && (
+        <TileEditor 
+          tile={activeEditingTile}
+          onUpdate={handleTileUpdate}
+          onClose={() => setEditingTileId(null)}
+        />
+      )}
+
       {/* Bottom Floating Control */}
-      <FloatingDock
-        onStart={handleStartSequence}
-        isEditMode={isEditMode}
-        onToggleEditMode={() => setIsEditMode(!isEditMode)}
-        onResetTiles={handleResetTiles}
-        onExportConfig={handleExportConfig}
-        onImportConfig={handleImportConfig}
-      />
-
-      {/* Tile Editor Modal */}
-      <TileEditor
-        tile={selectedTile}
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setSelectedTile(null);
+      <FloatingDock 
+        onStart={handleStartSequence} 
+        onToggleEdit={() => {
+            setIsEditMode(!isEditMode);
+            setEditingTileId(null);
         }}
-        onSave={handleSaveTile}
+        isEditing={isEditMode}
       />
-
+      
     </div>
   );
 };
