@@ -5,9 +5,12 @@ import FloatingDock from './components/FloatingDock';
 import TileEditor from './components/TileEditor';
 import MediaOverlay from './components/MediaOverlay';
 import AdminLogin from './components/AdminLogin';
+import LegalModal from './components/LegalModal';
 import { PORTFOLIO_TILES, APP_METADATA } from './constants';
 import { TileConfig } from './types';
 import { initAudio } from './utils/sound';
+
+type LegalPage = 'impressum' | 'datenschutz' | 'agb';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -23,6 +26,9 @@ const App: React.FC = () => {
 
   // Media Overlay State
   const [selectedMediaTile, setSelectedMediaTile] = useState<TileConfig | null>(null);
+
+  // Legal Modal State
+  const [legalPage, setLegalPage] = useState<LegalPage | null>(null);
 
   // --- AUDIO INIT ---
   useEffect(() => {
@@ -179,9 +185,23 @@ const App: React.FC = () => {
         isAdmin={isAdmin}
       />
 
+      {/* Legal Modal */}
+      {legalPage && (
+        <LegalModal page={legalPage} onClose={() => setLegalPage(null)} />
+      )}
+
+      {/* Legal Footer */}
+      <footer className="fixed bottom-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 text-[9px] text-neutral-700 tracking-wider">
+        <span className="cursor-pointer hover:text-neutral-400 transition-colors" onClick={() => setLegalPage('impressum')}>Impressum</span>
+        <span className="text-neutral-800">·</span>
+        <span className="cursor-pointer hover:text-neutral-400 transition-colors" onClick={() => setLegalPage('datenschutz')}>Datenschutz</span>
+        <span className="text-neutral-800">·</span>
+        <span className="cursor-pointer hover:text-neutral-400 transition-colors" onClick={() => setLegalPage('agb')}>AGB</span>
+      </footer>
+
       {/* Hidden Admin Trigger */}
       {!isAdmin && (
-        <div 
+        <div
           className="fixed bottom-4 right-4 z-50 opacity-10 hover:opacity-100 cursor-pointer p-2 transition-opacity duration-300"
           onClick={() => setShowLogin(true)}
           title="Admin Access"
@@ -189,7 +209,7 @@ const App: React.FC = () => {
           <Star size={12} className="text-neutral-600" />
         </div>
       )}
-      
+
     </div>
   );
 };
