@@ -202,11 +202,11 @@ const App: React.FC = () => {
       {/* Hidden Admin Trigger */}
       {!isAdmin && (
         <div
-          className="fixed bottom-4 right-4 z-50 opacity-10 hover:opacity-100 cursor-pointer p-2 transition-opacity duration-300"
+          className="fixed top-4 right-4 z-[60] opacity-[0.08] hover:opacity-100 cursor-pointer p-3 transition-opacity duration-300"
           onClick={() => setShowLogin(true)}
           title="Admin Access"
         >
-          <Star size={12} className="text-neutral-600" />
+          <Star size={10} className="text-neutral-600" />
         </div>
       )}
 
