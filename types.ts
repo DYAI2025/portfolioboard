@@ -33,13 +33,23 @@ export interface TileConfig {
   subtitle?: string;
   value?: string | number;
   icon?: React.ReactNode;
+  
+  // Media & Backgrounds
   imageUrl?: string;
   videoUrl?: string; // Support for background videos (mp4/webm)
+  videoThumbnail?: string; // Specific thumbnail for video tiles
+  backgroundClass?: string; // Custom CSS class for background (gradients, animations, etc.)
+  showMediaOnHoverOnly?: boolean; // New: If true, media is hidden until hover
+  
+  // Link Configuration
   link?: string;
   linkTarget?: '_blank' | '_self' | '_parent' | '_top'; // Configurable link target
+  
+  // State & Style
   active?: boolean; // If true, mimics the "lit up" state from the reference
   accentColor?: 'blue' | 'purple' | 'white' | 'orange' | 'green';
   visualizerStyle?: 'bars' | 'wave' | 'spectrum';
   shadows?: TileShadowConfig;
   soundKey?: SoundKey; // Key for the organ sound (Cm, Dm, etc.)
+  textAlign?: 'left' | 'center' | 'right'; // New alignment property
 }
