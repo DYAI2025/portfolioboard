@@ -150,13 +150,13 @@ const Tile: React.FC<TileProps> = ({
       setIsPlaying(false);
     }
   }, [isEffectiveHover]);
-
-  const toggleMute = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsMuted(!isMuted);
-  };
-
++
++  const toggleMute = (e: React.MouseEvent) => {
++    e.preventDefault();
++    e.stopPropagation();
++    setIsMuted((prev) => !prev);
++  };
++
   // Programmatic Sound Effect
   useEffect(() => {
     if (forceHighlight && soundKey) {
