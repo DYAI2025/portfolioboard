@@ -1,23 +1,34 @@
 import React from 'react';
-import { Command, Edit2, Play, RotateCcw } from 'lucide-react';
+import { Command, Edit2, Play, RotateCcw, Download, Upload } from 'lucide-react';
 
 interface FloatingDockProps {
   onStart?: () => void;
   onToggleEdit?: () => void;
   onReset?: () => void;
+  onExport?: () => void;
+  onImport?: () => void;
   isEditing?: boolean;
   isAdmin?: boolean;
 }
 
-const FloatingDock: React.FC<FloatingDockProps> = ({ onStart, onToggleEdit, onReset, isEditing, isAdmin }) => {
+const FloatingDock: React.FC<FloatingDockProps> = ({
+  onStart,
+  onToggleEdit,
+  onReset,
+  onExport,
+  onImport,
+  isEditing,
+  isAdmin,
+}) => {
   const handleReset = () => {
-    if (window.confirm('Reset all tiles to default? This will clear your saved changes.')) {
-      onReset?.();
-    }
+    // Bestätigung liegt in App.tsx (handleResetTiles)
+    onReset?.();
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[400px] px-4">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[420px] px-4">
+
+      {/* Main Dock */}
       <div className="
         relative
         flex items-center justify-between
@@ -30,9 +41,11 @@ const FloatingDock: React.FC<FloatingDockProps> = ({ onStart, onToggleEdit, onRe
         {/* Glow behind dock */}
         <div className="absolute -inset-4 bg-violet-500/20 blur-2xl -z-10 rounded-full pointer-events-none" />
 
-        {/* Start Button */}
+        {/* Start / Roulette */}
         <div
           onClick={onStart}
+          role="button"
+          aria-label="Roulette starten"
           className="flex-1 h-full rounded-[1.5rem] bg-[#1a1a1a] mx-1 flex items-center justify-center border border-white/5 active:bg-[#222] transition-colors cursor-pointer group gap-2"
         >
           <Play size={14} className="text-neutral-400 group-hover:text-white transition-colors fill-current" />
@@ -43,40 +56,66 @@ const FloatingDock: React.FC<FloatingDockProps> = ({ onStart, onToggleEdit, onRe
         {isAdmin && (
           <div
             onClick={onToggleEdit}
+            role="button"
+            aria-pressed={isEditing}
+            aria-label="Edit-Mode umschalten"
+            title="Edit Mode"
             className={`
-               w-14 h-12 mx-1 flex items-center justify-center rounded-[1.5rem] border transition-colors cursor-pointer
-               ${isEditing
-                  ? 'bg-yellow-400 text-black border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.4)]'
-                  : 'bg-[#1a1a1a] border-white/5 text-neutral-400 hover:text-white hover:bg-[#252525]'
-               }
+              w-14 h-12 mx-1 flex items-center justify-center rounded-[1.5rem] border transition-colors cursor-pointer
+              ${isEditing
+                ? 'bg-yellow-400 text-black border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.4)]'
+                : 'bg-[#1a1a1a] border-white/5 text-neutral-400 hover:text-white hover:bg-[#252525]'
+              }
             `}
-            title="Toggle Edit Mode"
           >
             <Edit2 size={18} />
           </div>
         )}
 
-        {/* Reset Button (only visible in edit mode) */}
+        {/* Reset (Admin + Edit-Mode) */}
         {isAdmin && isEditing && (
           <div
             onClick={handleReset}
+            role="button"
+            aria-label="Auf Standard zurücksetzen"
+            title="Zurücksetzen"
             className="w-14 h-12 mx-1 flex items-center justify-center rounded-[1.5rem] bg-[#1a1a1a] border border-white/5 text-neutral-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors cursor-pointer"
-            title="Reset to defaults"
           >
             <RotateCcw size={16} />
           </div>
         )}
 
-        {/* Command Icon */}
+        {/* Command (dekorativ) */}
         <div className="w-14 h-12 mx-1 flex items-center justify-center rounded-[1.5rem] bg-[#1a1a1a] border border-white/5 text-neutral-400 hover:text-white hover:bg-[#252525] transition-colors cursor-pointer">
           <Command size={20} />
         </div>
       </div>
 
-      <div className="text-center mt-3">
+      {/* Status / Export-Import Bar */}
+      <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900/50 border border-white/5 text-[10px] text-neutral-500 uppercase tracking-widest">
-          {isEditing ? '✏ EDIT MODE — changes auto-saved' : '◆ LUMINA OS · PORTFOLIO v2.0'}
+          {isEditing ? '✏ Edit Mode — auto-saved' : '◆ Lumina OS · Portfolio v2.0'}
         </span>
+
+        {/* Export / Import (Admin + Edit-Mode) */}
+        {isAdmin && isEditing && (
+          <>
+            <button
+              onClick={onExport}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-900/60 border border-white/5 text-[10px] text-neutral-500 hover:text-white hover:border-white/10 transition-colors uppercase tracking-widest"
+              title="Tiles als JSON exportieren"
+            >
+              <Download size={9} /> Export
+            </button>
+            <button
+              onClick={onImport}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-900/60 border border-white/5 text-[10px] text-neutral-500 hover:text-white hover:border-white/10 transition-colors uppercase tracking-widest"
+              title="Tiles aus JSON importieren"
+            >
+              <Upload size={9} /> Import
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
