@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { TileConfig, TileSize, TileType } from '../types';
 import { X, Check, LayoutGrid, Type, Image as ImageIcon, Video, AlignCenter, AlignLeft, AlignRight, Clapperboard, Upload, Eye, EyeOff, Palette } from 'lucide-react';
 
@@ -8,10 +8,21 @@ interface TileEditorProps {
   onClose: () => void;
 }
 
+// Track blob URLs created during this session so we can revoke them on cleanup
+const blobUrls = new Set<string>();
+
 const TileEditor: React.FC<TileEditorProps> = ({ tile, onUpdate, onClose }) => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
-  
+
+  // Revoke all blob URLs when the editor unmounts
+  useEffect(() => {
+    return () => {
+      blobUrls.forEach(url => URL.revokeObjectURL(url));
+      blobUrls.clear();
+    };
+  }, []);
+
   const handleChange = (field: keyof TileConfig, value: any) => {
     onUpdate({ ...tile, [field]: value });
   };
@@ -19,8 +30,14 @@ const TileEditor: React.FC<TileEditorProps> = ({ tile, onUpdate, onClose }) => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'imageUrl' | 'videoUrl') => {
     const file = e.target.files?.[0];
     if (file) {
-      // Create a local URL for the uploaded file
+      // Revoke previous blob URL for this field if it's a blob
+      const prevUrl = tile[field] as string | undefined;
+      if (prevUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(prevUrl);
+        blobUrls.delete(prevUrl);
+      }
       const url = URL.createObjectURL(file);
+      blobUrls.add(url);
       handleChange(field, url);
     }
   };

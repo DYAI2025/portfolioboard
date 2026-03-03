@@ -6,6 +6,9 @@ interface AdminLoginProps {
   onClose: () => void;
 }
 
+const ADMIN_USER = import.meta.env.VITE_ADMIN_USER ?? '';
+const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS ?? '';
+
 const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onClose }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -13,7 +16,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onClose }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name === 'Bazodiac' && password === '123qwe<<') {
+    if (name === ADMIN_USER && password === ADMIN_PASS) {
       onLogin(true);
       onClose();
     } else {
@@ -25,13 +28,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onClose }) => {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in duration-200">
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors"
         >
           <X size={18} />
         </button>
-        
+
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-white/5 rounded-lg text-white">
             <Lock size={20} />
@@ -51,7 +54,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onClose }) => {
               autoFocus
             />
           </div>
-          
+
           <div>
             <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1">Password</label>
             <input

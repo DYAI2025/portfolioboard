@@ -9,9 +9,40 @@ import { PORTFOLIO_TILES, APP_METADATA } from './constants';
 import { TileConfig } from './types';
 import { initAudio } from './utils/sound';
 
+const STORAGE_KEY = 'lumina_tiles_v1';
+
+function loadTiles(): TileConfig[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as TileConfig[];
+      // Merge with default tiles to preserve icon ReactNodes (not serializable)
+      return PORTFOLIO_TILES.map(defaultTile => {
+        const saved = parsed.find(t => t.id === defaultTile.id);
+        return saved ? { ...defaultTile, ...saved, icon: defaultTile.icon } : defaultTile;
+      });
+    }
+  } catch {
+    // Corrupt storage → reset
+    localStorage.removeItem(STORAGE_KEY);
+  }
+  return PORTFOLIO_TILES;
+}
+
+function saveTiles(tiles: TileConfig[]) {
+  try {
+    // Strip non-serializable fields (icon is ReactNode)
+    const serializable = tiles.map(({ icon: _icon, ...rest }) => rest);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  } catch {
+    // Storage might be full or restricted
+    console.warn('Lumina: Could not persist tiles to localStorage.');
+  }
+}
+
 const App: React.FC = () => {
   // --- STATE ---
-  const [tiles, setTiles] = useState<TileConfig[]>(PORTFOLIO_TILES);
+  const [tiles, setTiles] = useState<TileConfig[]>(loadTiles);
   const [highlightedTileId, setHighlightedTileId] = useState<string | null>(null);
   const [isSequenceRunning, setIsSequenceRunning] = useState(false);
   
@@ -98,8 +129,18 @@ const App: React.FC = () => {
     setEditingTileId(tile.id);
   };
 
+  // --- PERSIST tiles on change ---
+  useEffect(() => {
+    saveTiles(tiles);
+  }, [tiles]);
+
   const handleTileUpdate = (updatedTile: TileConfig) => {
     setTiles(prevTiles => prevTiles.map(t => t.id === updatedTile.id ? updatedTile : t));
+  };
+
+  const handleResetTiles = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setTiles(PORTFOLIO_TILES);
   };
 
   const handleOpenMedia = (tile: TileConfig) => {
@@ -175,6 +216,7 @@ const App: React.FC = () => {
             setIsEditMode(!isEditMode);
             setEditingTileId(null);
         }}
+        onReset={handleResetTiles}
         isEditing={isEditMode}
         isAdmin={isAdmin}
       />
