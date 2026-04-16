@@ -19,15 +19,6 @@ export enum TileSize {
 
 export type SoundKey = 'Cm' | 'Dm' | 'Em' | 'Fm' | 'Gm' | 'Am';
 
-// Erweiterte Glow-Farbpalette (15 Farben: 5 bestehend + 6 sanft + 4 kräftig)
-export type AccentColor =
-  // Bestehend
-  | 'blue' | 'purple' | 'white' | 'orange' | 'green'
-  // Sanft
-  | 'sky' | 'rose' | 'amber' | 'teal' | 'indigo' | 'lime'
-  // Kräftig
-  | 'cyan' | 'fuchsia' | 'red' | 'yellow';
-
 export interface TileShadowConfig {
   default?: string;
   hover?: string;
@@ -42,24 +33,23 @@ export interface TileConfig {
   subtitle?: string;
   value?: string | number;
   icon?: React.ReactNode;
-
+  
   // Media & Backgrounds
   imageUrl?: string;
-  videoUrl?: string;        // mp4/webm — XOR mit audioUrl
-  audioUrl?: string;        // mp3/m4a/ogg/wav — XOR mit videoUrl
-  videoThumbnail?: string;  // Poster-Bild für Video-Kacheln
-  backgroundClass?: string;
-  showMediaOnHoverOnly?: boolean;
-
+  videoUrl?: string; // Support for background videos (mp4/webm)
+  videoThumbnail?: string; // Specific thumbnail for video tiles
+  backgroundClass?: string; // Custom CSS class for background (gradients, animations, etc.)
+  showMediaOnHoverOnly?: boolean; // New: If true, media is hidden until hover
+  
   // Link Configuration
   link?: string;
-  linkTarget?: '_blank' | '_self' | '_parent' | '_top';
-
+  linkTarget?: '_blank' | '_self' | '_parent' | '_top'; // Configurable link target
+  
   // State & Style
-  active?: boolean;
-  accentColor?: AccentColor;
+  active?: boolean; // If true, mimics the "lit up" state from the reference
+  accentColor?: 'blue' | 'purple' | 'white' | 'orange' | 'green';
   visualizerStyle?: 'bars' | 'wave' | 'spectrum';
   shadows?: TileShadowConfig;
-  soundKey?: SoundKey;
-  textAlign?: 'left' | 'center' | 'right';
+  soundKey?: SoundKey; // Key for the organ sound (Cm, Dm, etc.)
+  textAlign?: 'left' | 'center' | 'right'; // New alignment property
 }
